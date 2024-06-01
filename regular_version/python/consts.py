@@ -2,7 +2,12 @@ import pygame
 import os
 from pygame.locals import *
 
-# consts
+
+# serial communication values
+port = '/dev/ttyUSB0'
+baudrate = 115200
+
+# colors
 gray = (100, 100, 100)
 lightgray = (180, 180, 180)
 verylightgray = (220, 220, 220)
@@ -310,7 +315,7 @@ MAX_RUNS = 60
 
 SHOW_RED_BORDER = True
 
-# arduino
+# laser values
 MAX_TIME_WAITING_FOR_ARDUINO = 5  # seconds
 MAX_DRAWING_TIME_FOR_ARDUINO = 150  # seconds
 time_delay_arduino = 0.005  # seconds

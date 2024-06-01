@@ -1,17 +1,22 @@
+"""
+Filename: regular_drawing.py
+Purpose: This file is the main file of the program. It is responsible for the GUI and the main logic of the program.
+Author: A.B.S
+"""
+
 import math
 import logging
 import serial
 import struct
 import time
 from datetime import datetime
-from consts import *
 from logging.handlers import RotatingFileHandler
 
-pygame.init()
+from consts import *
+from Button import *
+from BezierCurve import *
+from basic_routines import *
 
-port = '/dev/ttyUSB0'
-baudrate = 115200
-arduino = None
 
 # logging setup
 logging.basicConfig(filename=LOG_FILE_PATH, filemode='a', level=logging.INFO)
@@ -23,11 +28,16 @@ logger.propagate = False
 logger.addHandler(handler)
 logger.info('--------------- PROGRAM START ---------------')
 
+
+# arduino setup
+arduino = None
+
 try:
     arduino = serial.Serial(port, baudrate)
     found_arduino = True
     print("Found Arduino")
     logger.info('Found Arduino')
+
 except Exception as e:
     print(f"Serial port error: {e}")
     print('ARDUINO NOT CONNECTED')
@@ -40,156 +50,6 @@ font_style = pygame.font.SysFont("calibri", 30)
 font_style.bold = True
 
 
-class Button(object):
-    def __init__(self, pos, size, color, coloron, img, imgon, function):
-        self.pos = pos
-        self.size = size
-        self.color = color
-        self.coloron = coloron
-        self.img = img  # image when not clicking
-        self.imgon = imgon  # image when clicking
-        self.tempimg = img  # also saves img but not changing (tempimg = temporary image)
-        self.function = function
-        self.done = True
-
-    #        self.last_pos_mouse_up = [0,0]
-
-    def check(self):
-        global buttons_enabled
-        mouse = pygame.mouse.get_pos()
-        click = pygame.mouse.get_pressed()
-        rect = pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
-        # on_button = rect.collidepoint(mouse) # good for hovering image but this is a touch screen so not needed
-        on_button = rect.collidepoint(mouse)
-        if click[0] == 0:
-            self.img = self.tempimg
-            # pygame.draw.rect(screen, self.color, rect)
-            if self.img is not None:
-                screen.blit(self.img, self.img.get_rect(center=rect.center))
-            else:
-                pygame.draw.rect(screen, self.color, rect)
-            self.done = True
-        elif on_button and self.done:
-            # pygame.draw.rect(screen, self.coloron, rect)
-            if self.imgon is not None:
-                screen.blit(self.imgon, self.imgon.get_rect(center=rect.center))
-            else:
-                pygame.draw.rect(screen, self.coloron, rect)
-            self.done = False
-            self.img = self.imgon
-            if self.function is not None:
-                self.function()
-            buttons_enabled = False
-        #        elif on_button:
-        #            pygame.draw.rect(screen, self.coloron, rect)
-        #            screen.blit(self.imgon, self.imgon.get_rect(center=rect.center))
-        else:
-            # pygame.draw.rect(screen, self.color, rect)
-            if self.img is not None:
-                screen.blit(self.img, self.img.get_rect(center=rect.center))
-            else:
-                pygame.draw.rect(screen, self.color, rect)
-
-    def draw_static(self):
-        rect = pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
-        # pygame.draw.rect(screen, self.color, rect)
-        if self.img is not None:
-            screen.blit(self.img, self.img.get_rect(center=rect.center))
-        else:
-            pygame.draw.rect(screen, self.color, rect)
-
-
-# object of a curve, defined by 4 points
-class BezierCurve(object):
-    def __init__(self, p0, p1, p2, p3, moveable, color, width):
-        self.vertices = [p0, p1, p2, p3]
-        self.moveable = moveable
-        self.color = color
-        self.width = width
-
-    def compute_bezier_points(self, numPoints=None):
-        if numPoints is None:
-            numPoints = 30
-        if numPoints < 2 or len(self.vertices) != 4:
-            return None
-
-        result = []
-
-        b0x = self.vertices[0][0]
-        b0y = self.vertices[0][1]
-        b1x = self.vertices[1][0]
-        b1y = self.vertices[1][1]
-        b2x = self.vertices[2][0]
-        b2y = self.vertices[2][1]
-        b3x = self.vertices[3][0]
-        b3y = self.vertices[3][1]
-
-        # Compute polynomial coefficients from Bezier points
-        ax = (-b0x + 3 * b1x + -3 * b2x + b3x)
-        ay = (-b0y + 3 * b1y + -3 * b2y + b3y)
-
-        bx = (3 * b0x + -6 * b1x + 3 * b2x)
-        by = (3 * b0y + -6 * b1y + 3 * b2y)
-
-        cx = (-3 * b0x + 3 * b1x)
-        cy = (-3 * b0y + 3 * b1y)
-
-        dx = (b0x)
-        dy = (b0y)
-
-        # Set up the number of steps and step size
-        numSteps = numPoints - 1  # arbitrary choice
-        h = 1.0 / numSteps  # compute our step size
-
-        # Compute forward differences from Bezier points and "h"
-        pointX = dx
-        pointY = dy
-
-        firstFDX = (ax * (h * h * h) + bx * (h * h) + cx * h)
-        firstFDY = (ay * (h * h * h) + by * (h * h) + cy * h)
-
-        secondFDX = (6 * ax * (h * h * h) + 2 * bx * (h * h))
-        secondFDY = (6 * ay * (h * h * h) + 2 * by * (h * h))
-
-        thirdFDX = (6 * ax * (h * h * h))
-        thirdFDY = (6 * ay * (h * h * h))
-
-        # Compute points at each step
-        result.append((int(pointX), int(pointY)))
-
-        for i in range(numSteps):
-            pointX += firstFDX
-            pointY += firstFDY
-
-            firstFDX += secondFDX
-            firstFDY += secondFDY
-
-            secondFDX += thirdFDX
-            secondFDY += thirdFDY
-
-            result.append((int(pointX), int(pointY)))
-
-        return result
-
-    def draw(self, surface=None):
-        global screen
-        # Draw control points
-        control_points = self.vertices
-        # Draw bezier curve
-        b_points = self.compute_bezier_points()
-        pygame.draw.lines(screen if surface is None else surface, self.color, False, b_points, self.width)
-
-    def get_length(self):
-        # get the spatial length of the curve
-        b_points = self.compute_bezier_points()
-        length = 0
-        for i in range(len(b_points) - 1):
-            length += distance(b_points[i], b_points[i + 1])
-        return length
-
-
-
-# screen = pygame.display.set_mode((screen_width, screen_height))
 def insert_drawing_to_surface(surf):
     global curves
     global contour
@@ -208,7 +68,7 @@ def insert_drawing_to_surface(surf):
              int((curves[i].vertices[3][1] - borderLineHeight) / (
                      borderLine2Height - borderLineHeight) * saved_image_height)],
             False, curveColor, curveWidth)
-        new_curve.draw(surface=surf)
+        new_curve.draw(surf)
     for i in range(len(contour)):
         new_curve = BezierCurve(
             [int((contour[i].vertices[0][0] - borderLineX) / (borderLine2X - borderLineX) * saved_image_width),
@@ -241,16 +101,6 @@ def save_drawing_img():
     saving_surface = screen.subsurface(rect)
     pygame.image.save(saving_surface, os.path.join(drawings_dir, datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png'))
 
-
-def check_buttons():
-    global buttons
-    global buttons_enabled
-    if buttons_enabled:
-        for button in buttons:
-            button.check()
-    else:
-        for button in buttons:
-            button.draw_static()
 
 
 def check_dc_motor():
@@ -554,43 +404,6 @@ def msgEstimatedTime(time):
 #     text_rect = value.get_rect(center=(screen_width / 2, 50))
 #     screen.blit(value, text_rect)
 
-
-# distance is NOT sqrt of sum of squares because laser is going in zigzag and not in straight line
-def distance(point1, point2):
-    # return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
-    return max(abs(point1[0] - point2[0]), abs(point1[1] - point2[1]))
-
-def length_of_curve(curve):
-    length = 0
-    for i in range(len(curve) - 1):
-        length += math.dist(curve[i], curve[i + 1])
-    return length
-
-# the zigzag is not a straight line, so the distance is not the sqrt of the sum of squares
-def length_of_curve_zigzag(curve):
-    length = 0
-    for i in range(len(curve) - 1):
-        length += distance(curve[i], curve[i + 1])
-    return length
-
-# Function to rotate a point around a fixed point
-def rotate_point(point, angle, center_p):
-    x, y = point
-    cx, cy = center_p
-
-    # Translate the point and center to the origin
-    translated_x = x - cx
-    translated_y = y - cy
-
-    # Perform the rotation
-    new_x = translated_x * math.cos(angle) - translated_y * math.sin(angle)
-    new_y = translated_x * math.sin(angle) + translated_y * math.cos(angle)
-
-    # Translate the point back to its original position
-    rotated_x = new_x + cx
-    rotated_y = new_y + cy
-
-    return int(rotated_x), int(rotated_y)
 
 
 # clear the LAST curve
@@ -919,7 +732,7 @@ def main():
         if show_estimated_time:
             msgEstimatedTime(max(estimated_time - time.time() + last_send_time, 0))
 
-        check_buttons()
+        check_buttons(buttons)
         check_idle()
         check_dc_motor()
 
