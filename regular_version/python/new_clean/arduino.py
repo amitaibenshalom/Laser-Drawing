@@ -5,8 +5,7 @@ Purpose: Arduino functions for the Jumping Ring UI
 
 import serial
 import serial.tools.list_ports
-import sys
-from consts import *
+from consts import BAUDRATE
 
 
 def find_arduino_port(logger=None):

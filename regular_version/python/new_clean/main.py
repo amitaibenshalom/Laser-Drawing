@@ -28,4 +28,20 @@ def main():
         screen = pygame.display.set_mode(VIEWPORT)
         view_port = VIEWPORT
     
-    asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, view_port)
+    # asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, view_port)
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+                running = False
+    
+        screen.fill(BLACK)
+        # asset_loader.render(screen)
+
+        pygame.display.flip()
+        clock.tick(30)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,6 @@
 """
-Filename: basic_routines.py
-Purpose: Basic routines for the program
+Filename: routines.py
+Purpose: routines for the program
 """
 
 def distance(point1, point2):

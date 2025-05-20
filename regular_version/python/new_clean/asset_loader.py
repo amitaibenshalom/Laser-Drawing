@@ -117,7 +117,7 @@ def convert_to_pixels(value, viewport):
         """
         Convert a value to pixels based on the viewport size.
         :param value: The value to convert (can be a percentage or an absolute value).
-        :param viewport: The size of the viewport (width, height).
+        :param viewport: The size of the viewport - int.
         :return: The value in pixels.
         """
         if value == "full":

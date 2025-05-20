@@ -484,7 +484,7 @@ def check_idle():
         idle_clock = time.time()
 
 
-def draw_all():
+def draw_all(screen):
     global curves
     for curve in curves:
         if len(curve) > 1:
@@ -493,7 +493,7 @@ def draw_all():
         for p in current_curve:
             pygame.draw.lines(screen, curveColor, False, current_curve, curveWidth)
     for curve in contour:
-        curve.draw()
+        curve.draw(screen)
 
 
 def show_popup():
@@ -723,7 +723,7 @@ def main():
         # draw a rectangle in the middle of the screen to show the laser cutting area
         pygame.draw.rect(screen, cuttingAreaColor,
                          (cuttingAreaPos[0], cuttingAreaPos[1], cuttingAreaSize[0], cuttingAreaSize[1]))
-        draw_all()
+        draw_all(screen)
         msgNumCurves((max_length - total_length)/max_length * 100)
         if show_picture:
             popup_x = centerInsideBorders[0] - infoHebSize[0] / 2
