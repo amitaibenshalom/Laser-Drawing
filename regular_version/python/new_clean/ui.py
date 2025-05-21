@@ -32,7 +32,7 @@ class Ui:
             "draw": (("6%", None), ("89%", "22%"), ("pencil.png", "pencilPressed.png"), self.drawing_mode_on, True),
             "erase": (("6%", None), ("89%", "37%"), ("eraser.png", "eraserPressed.png"), self.erasing_mode_on, True),
             "clear": (("6%", None), ("89%", "52%"), ("garbage.png", "garbagePressed.png"), self.clear_all, False),
-            "print": (("6%", None), ("89%", "77%"), ("printer.png", "printerPressed.png"), None, False),
+            "print": (("6%", None), ("89%", "77%"), ("printer.png", "printerPressed.png"), self.print_drawing, False),
             "heart": (("7%", None), ("4%", "30%"), ("heart.jpg", "heartPressed.jpg"), self.frame_heart, True),
             "drop": (("7%", None), ("4%", "50%"), ("drop.jpg", "dropPressed.jpg"), self.frame_drop, True),
             "square": (("7%", None), ("4%", "70%"), ("square.jpg", "squarePressed.jpg"), self.frame_square, True)
@@ -169,6 +169,10 @@ class Ui:
     def clear_all(self):
         self.points.clear()
 
+    def print_drawing(self):
+        print("Printing Drawing...")
+        print(self.points)
+
     def frame_heart(self):
         # TODO: frame
         self.frame = HEART_FRAME
@@ -195,7 +199,8 @@ class Ui:
     
     def end_stroke(self):
         if self.mode == DRAWING_MODE:
-            self.points.append(None)
+            if self.points and self.points[-1] is not None:
+                self.points.append(None)
 
     def total_drawing_length(self):
         total_length = 0
@@ -242,7 +247,7 @@ class Ui:
 
         width = convert_to_pixels(width, self.view_port[0])
         height = convert_to_pixels(height, self.view_port[1])
-        font = pygame.font.SysFont(None, 50)
+        font = pygame.font.SysFont(None, 60)
         text_color = BLACK
         rect_color = THE_RED_THAT_IS_ON_THE_BUTTONS
         bg_color = BLACK
