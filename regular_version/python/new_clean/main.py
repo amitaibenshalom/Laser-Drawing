@@ -7,6 +7,7 @@ import pygame
 from pygame.locals import *
 from consts import *
 from asset_loader import *
+from ui import Ui
 from logs import *
 
 
@@ -29,15 +30,30 @@ def main():
         view_port = VIEWPORT
     
     # asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, view_port)
+    ui = Ui(screen, view_port)
 
+    mouse_down = False
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                 running = False
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    mouse_down = True      
+                    ui.handle_point(event.pos)
+
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:  # Left click released
+                    mouse_down = False
+                    ui.end_stroke()
     
-        screen.fill(BLACK)
-        # asset_loader.render(screen)
+        if mouse_down:
+            mouse_pos = pygame.mouse.get_pos()
+            ui.handle_point(mouse_pos)
+
+        ui.render_screen()
 
         pygame.display.flip()
         clock.tick(30)

@@ -52,6 +52,10 @@ class AssetLoader:
 
                 # calculate the size
                 for k in [0, 1]:
+                    if not size[k]:
+                        new_size[k] = new_size[1-k]
+                        continue
+
                     if size[k] == "full":
                         new_size[k] = self.viewport_size[k]
                         continue
@@ -120,6 +124,9 @@ def convert_to_pixels(value, viewport):
         :param viewport: The size of the viewport - int.
         :return: The value in pixels.
         """
+        if not value:
+            return None
+        
         if value == "full":
             return viewport
         elif value == "center":
