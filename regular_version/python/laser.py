@@ -5,7 +5,7 @@ Purpose: Handle all the laser functions
 
 import serial
 import serial.tools.list_ports
-from consts import BAUDRATE
+from consts import *
 import time
 
 
@@ -20,7 +20,7 @@ class Laser():
 
         self.drawing = False
         self.sent_initial_params = False
-        
+
 
     
     def find_arduino_port(self):

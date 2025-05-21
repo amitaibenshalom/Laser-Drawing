@@ -330,7 +330,6 @@ class Ui:
             last_point = point
 
     def render_available_length(self, width="15%", height="4%"):
-
         available_length_precentage = max(0, min(100, int((1 - (self.total_drawing_length() / MAX_LENGTH)) * 100)))
 
         width = convert_to_pixels(width, self.view_port[0])
@@ -353,8 +352,6 @@ class Ui:
         text_color = BLACK
         text = font.render(f"{self.estimated_time:.1f}", True, text_color)
         self.screen.blit(text, (self.buttons["print"].pos[0] + self.buttons["print"].size[0] // 2 - text.get_width() // 2, self.buttons["print"].pos[1] + self.buttons["print"].size[1] + 5))
-
-        
 
     def calc_estimated_time(self):
 
