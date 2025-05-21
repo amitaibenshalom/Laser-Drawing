@@ -19,7 +19,7 @@ class Laser():
         self.last_time_tried_to_connect = time.time()
 
         self.drawing = False
-        self.sent_initial_params = False
+        self.sent_init_params = False
 
 
     
@@ -77,3 +77,9 @@ class Laser():
                 self.logger.error(f"Error: Could not open serial port {self.port} - {e}")
 
             return None
+        
+    def send_initial_parameters(self, **params):
+        pass
+
+    def send_drawing(self, points, frame_points):
+        pass
