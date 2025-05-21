@@ -21,6 +21,8 @@ class Ui:
         self.border_line_right = convert_to_pixels("84%", self.view_port[0])
         self.border_line_top = convert_to_pixels("18.5%", self.view_port[1])
         self.border_line_bottom = convert_to_pixels("92%", self.view_port[1])
+        self.center_inside_borders = ((self.border_line_left + self.border_line_right) // 2, (self.border_line_top + self.border_line_bottom) // 2)
+        self.center = (view_port[0] // 2, view_port[1] // 2) 
 
         # dict of picture names, their sizes and position to load on screen
         PICTURES_TO_LOAD = {
@@ -40,10 +42,13 @@ class Ui:
 
         self.points = []
         self.mode = DRAWING_MODE
-        self.frame = HEART_FRAME
+        self.frame_points = []
+        self.frame = None
         self.idle = False
         self.asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, self.view_port)
         self.buttons = self.init_buttons(BUTTONS_CONFIGURATION)
+
+        self.frame_heart()
 
         
     def init_buttons(self, buttons_configuration):
@@ -74,6 +79,7 @@ class Ui:
         self.asset_loader.render(self.screen)
         self.render_buttons()
         self.draw_lines()
+        self.draw_frame()
         self.show_available_length()
         
 
@@ -174,14 +180,65 @@ class Ui:
         print(self.points)
 
     def frame_heart(self):
-        # TODO: frame
         self.frame = HEART_FRAME
+        self.frame_points.clear()
+        
+        with open(os.path.join(FRAMES_DIR, "heart.txt"), 'r') as f:
+            lines = [line.strip() for line in f if not line.startswith("#")]
+
+            relative_width = int(lines[0])
+            relative_height = int(lines[1])
+            list_points = eval(lines[2])
+
+            # scale frame to view port
+            for i, point in enumerate(list_points):
+                if point is not None:
+                    x, y = point
+                    list_points[i] = (x / relative_width * self.view_port[0] + self.center_inside_borders[0] - self.center[0],
+                                       y / relative_height * self.view_port[1]  + self.center_inside_borders[1] - self.center[1])
+
+            self.frame_points = list_points
+
 
     def frame_drop(self):
         self.frame = DROP_FRAME
+        self.frame_points.clear()
+        
+        with open(os.path.join(FRAMES_DIR, "drop.txt"), 'r') as f:
+            lines = [line.strip() for line in f if not line.startswith("#")]
+
+            relative_width = int(lines[0])
+            relative_height = int(lines[1])
+            list_points = eval(lines[2])
+
+            # scale frame to view port
+            for i, point in enumerate(list_points):
+                if point is not None:
+                    x, y = point
+                    list_points[i] = (x / relative_width * self.view_port[0] + self.center_inside_borders[0] - self.center[0],
+                                       y / relative_height * self.view_port[1]  + self.center_inside_borders[1] - self.center[1])
+
+            self.frame_points = list_points
 
     def frame_square(self):
         self.frame = SQUARE_FRAME
+        self.frame_points.clear()
+        
+        with open(os.path.join(FRAMES_DIR, "square.txt"), 'r') as f:
+            lines = [line.strip() for line in f if not line.startswith("#")]
+
+            relative_width = int(lines[0])
+            relative_height = int(lines[1])
+            list_points = eval(lines[2])
+
+            # scale frame to view port
+            for i, point in enumerate(list_points):
+                if point is not None:
+                    x, y = point
+                    list_points[i] = (x / relative_width * self.view_port[0] + self.center_inside_borders[0] - self.center[0],
+                                       y / relative_height * self.view_port[1]  + self.center_inside_borders[1] - self.center[1])
+
+            self.frame_points = list_points
 
     def distance(self, p1, p2):
         return math.hypot(p2[0] - p1[0], p2[1] - p1[1])
@@ -238,6 +295,19 @@ class Ui:
             
             if last_point is not None:
                 pygame.draw.line(self.screen, DRAWING_COLOR, last_point, point, DRAWING_WIDTH)
+            
+            last_point = point
+
+    def draw_frame(self):
+        last_point = None
+        for point in self.frame_points:
+            
+            if point is None:
+                last_point = None
+                continue
+            
+            if last_point is not None:
+                pygame.draw.line(self.screen, FRAME_COLOR, last_point, point, FRAME_WIDTH)
             
             last_point = point
 

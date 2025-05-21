@@ -8,7 +8,7 @@ import os
 BAUDRATE = 115200
 
 # screen dimensions
-VIEWPORT = (800, 600)  # default viewport size
+VIEWPORT = (1920 * 0.7, 1080 * 0.7)  # default viewport size
 FULLSCREEN = True  # if True, the game will run in fullscreen mode (ignoring the viewport size)
 
 # colors
@@ -42,6 +42,7 @@ SQUARE_FRAME = 2
 
 # assets
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")  # directory where the assets are stored
+FRAMES_DIR = os.path.join(os.path.dirname(__file__), "frames")  # directory where the frames are stored (as text files)
 
 # logging values
 LOG_FOLDER = os.path.join(os.path.dirname(__file__), "logs")  # get the path of the logs folder
