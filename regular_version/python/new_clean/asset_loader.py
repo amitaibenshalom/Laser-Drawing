@@ -45,8 +45,6 @@ class AssetLoader:
             
             if filename.endswith('.png') or filename.endswith('.jpg') or filename.endswith('.jpeg') or filename.endswith('.gif'):
                 image_path = os.path.join(self.folder_path, filename)
-
-                print(f"Loading image: {image_path}")
                 size, pos = size_pos
                 new_size, new_pos = [0, 0], [0, 0]
 

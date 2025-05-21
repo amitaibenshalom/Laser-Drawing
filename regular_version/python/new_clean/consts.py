@@ -1,6 +1,6 @@
 """
 Filename: consts.py
-Purpose: Constants for the car plotter exhibit
+Purpose: Constants for the exhibit
 """
 import os
 
@@ -18,12 +18,13 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
+GRAY = (180, 180, 180)
 
 BACKGROUND_COLOR = WHITE
 CUTTING_AREA_COLOR = WHITE
 COLOR_OUTSIDE_BORDER = (226, 233, 241)
 THE_RED_THAT_IS_ON_THE_BUTTONS = (199, 33, 47)
-
+CUTTING_AREA_COLOR = GRAY
 
 # drawing values
 DRAWING_COLOR = RED
@@ -52,27 +53,20 @@ BACKUP_COUNT = 10  # max number of log files, if all 10 are full, the first one 
 # idle
 IDLE_TIME = 100 # seconds
 
-
 # laser values
-# MAX_TIME_WAITING_FOR_ARDUINO = 5  # seconds
-# MAX_DRAWING_TIME_FOR_ARDUINO = 150  # seconds
+# LASER_DRAWING_TIMEOUT = 5  # seconds
+MAX_DRAWING_TIME_FOR_ARDUINO = 150  # seconds
 # time_delay_arduino = 0.005  # seconds
 
-# LASER_POWER = 255  # (0 <= x <= 255)
-# CONTOUR_POWER = 255  # (0 <= x <= 255)
-# LASER_OFF_RATE = 6
-# LASER_ON_RATE = 6
-# CONTOUR_RATE = 50 # for green/yellow paper
-# MAX_DC_MOTOR_TIME = 1.5  # seconds
+LASER_POWER = 255  # (0 <= x <= 255)
+FRAME_POWER = 255  # (0 <= x <= 255)
+LASER_OFF_RATE = 6
+LASER_ON_RATE = 6
+FRAME_RATE = 50 # for green/yellow paper
+MAX_DC_MOTOR_TIME = 1.5  # seconds
 
-# mm_per_pulse = [2*80.0/800, 2*80.0/800]  # mm per pulse for each motor
-# board_size = [83.0, 83.0]  # size of the board in mm
-# screen_scale = [board_size[0]/cuttingAreaWidth, board_size[1]/cuttingAreaHeight]  # scale from the screen to the board on arduino in mm per pixel
-# pulse_per_pixel = [screen_scale[0]/mm_per_pulse[0], screen_scale[1]/mm_per_pulse[1]]  # pulse per pixel for each motor
-
-# starting_key = -2
-# next_curve_key = -3
-# end_key = -4
+MM_PER_PULSE = [2*80.0/800, 2*80.0/800]  # mm per pulse for each motor
+LASER_BOARD_SIZE = [83.0, 83.0]  # size of the board in mm
 
 # found_arduino = False
 # send_to_arduino = False

@@ -1,6 +1,6 @@
 """
-Filename:
-Purpose:
+Filename: ui.py
+Purpose: Handels all the UI functions
 """
 
 import pygame
@@ -12,17 +12,26 @@ import math
 
 class Ui:
 
-    def __init__(self, screen, view_port):
+    def __init__(self, screen, view_port, logger):
 
         self.screen = screen        
         self.view_port = view_port
+        self.logger = logger
         
         self.border_line_left = convert_to_pixels("16%", self.view_port[0])
         self.border_line_right = convert_to_pixels("84%", self.view_port[0])
         self.border_line_top = convert_to_pixels("18.5%", self.view_port[1])
         self.border_line_bottom = convert_to_pixels("92%", self.view_port[1])
         self.center_inside_borders = ((self.border_line_left + self.border_line_right) // 2, (self.border_line_top + self.border_line_bottom) // 2)
-        self.center = (view_port[0] // 2, view_port[1] // 2) 
+        self.center = (view_port[0] // 2, view_port[1] // 2)
+
+        self.cutting_area_color = CUTTING_AREA_COLOR
+        self.cutting_area_height = self.border_line_bottom - self.border_line_top
+        self.cutting_area_width = self.cutting_area_height
+        self.cutting_area_pos = (self.center_inside_borders[0] - self.cutting_area_width // 2, self.center_inside_borders[1] - self.cutting_area_height // 2)
+
+        self.screen_to_laser_scale = [LASER_BOARD_SIZE[0] / self.cutting_area_width, LASER_BOARD_SIZE[1] / self.cutting_area_height]  # scale from the screen to the board on arduino in mm per pixel
+        self.pulse_per_pixel = [self.screen_to_laser_scale[0] / MM_PER_PULSE[0], self.screen_to_laser_scale[1] / MM_PER_PULSE[1]]  # pulse per pixel for each motor
 
         # dict of picture names, their sizes and position to load on screen
         PICTURES_TO_LOAD = {
@@ -45,6 +54,8 @@ class Ui:
         self.frame_points = []
         self.frame = None
         self.idle = False
+        self.estimated_time = 0
+        self.show_estimated_time = False
         self.asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, self.view_port)
         self.buttons = self.init_buttons(BUTTONS_CONFIGURATION)
 
@@ -67,21 +78,24 @@ class Ui:
 
     
     def render_screen(self):
-
-        # Draw everything
         self.screen.fill(BACKGROUND_COLOR)
-        # draw the border rectangles
+        self.render_borders()
+        self.render_cutting_area()
+        self.asset_loader.render(self.screen)
+        self.render_buttons()
+        self.draw_lines()
+        self.draw_frame()
+        self.render_available_length()
+        self.render_estimated_time()
+        
+    def render_borders(self):
         pygame.draw.rect(self.screen, COLOR_OUTSIDE_BORDER, (0, 0, self.border_line_left, self.view_port[1]))
         pygame.draw.rect(self.screen, COLOR_OUTSIDE_BORDER, (self.border_line_right, 0, self.view_port[0] - self.border_line_right, self.view_port[1]))
         pygame.draw.rect(self.screen, COLOR_OUTSIDE_BORDER, (0, 0, self.view_port[0], self.border_line_top))
         pygame.draw.rect(self.screen, COLOR_OUTSIDE_BORDER, (0, self.border_line_bottom, self.view_port[0], self.view_port[1] - self.border_line_bottom))
 
-        self.asset_loader.render(self.screen)
-        self.render_buttons()
-        self.draw_lines()
-        self.draw_frame()
-        self.show_available_length()
-        
+    def render_cutting_area(self):
+        pygame.draw.rect(self.screen, self.cutting_area_color, (self.cutting_area_pos[0], self.cutting_area_pos[1], self.cutting_area_width, self.cutting_area_height))
 
     def render_buttons(self):
         for name, button in self.buttons.items():
@@ -112,6 +126,8 @@ class Ui:
 
         for name, button in self.buttons.items():
             button.render()
+
+
 
     def drawing_mode_on(self):
         self.mode = DRAWING_MODE
@@ -175,9 +191,11 @@ class Ui:
     def clear_all(self):
         self.points.clear()
 
+        
     def print_drawing(self):
         print("Printing Drawing...")
         print(self.points)
+
 
     def frame_heart(self):
         self.frame = HEART_FRAME
@@ -311,7 +329,7 @@ class Ui:
             
             last_point = point
 
-    def show_available_length(self, width="15%", height="4%"):
+    def render_available_length(self, width="15%", height="4%"):
 
         available_length_precentage = max(0, min(100, int((1 - (self.total_drawing_length() / MAX_LENGTH)) * 100)))
 
@@ -326,4 +344,71 @@ class Ui:
         pygame.draw.rect(self.screen, bg_color, (self.border_line_right - width // 2, (self.border_line_top - height + text.get_height()) // 2, width, height))
         pygame.draw.rect(self.screen, rect_color, (self.border_line_right - width // 2, (self.border_line_top - height + text.get_height()) // 2, width * (available_length_precentage / 100), height))
 
+    def render_estimated_time(self):
+        if not self.show_estimated_time:
+            return
         
+        self.estimated_time = self.calc_estimated_time()
+        font = pygame.font.SysFont(None, 50)
+        text_color = BLACK
+        text = font.render(f"{self.estimated_time:.1f}", True, text_color)
+        self.screen.blit(text, (self.buttons["print"].pos[0] + self.buttons["print"].size[0] // 2 - text.get_width() // 2, self.buttons["print"].pos[1] + self.buttons["print"].size[1] + 5))
+
+        
+
+    def calc_estimated_time(self):
+
+        # distance is NOT sqrt of sum of squares because laser is going in zigzag and not in a straight line, the time is dictated by the longer axis travel
+        def distance_by_laser(p1, p2):
+            return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
+
+        estimated_time = 0
+        last_point = [self.center_inside_borders[0] - self.cutting_area_width // 2, self.center_inside_borders[1] - self.cutting_area_height // 2]
+        current_stroke = []
+        current_stoke_length = 0
+
+        for point in self.points:
+            if point is None:
+                if len(current_stroke) > 1:
+                    for i in range(len(current_stroke) - 1):
+                        current_stoke_length += distance_by_laser(current_stroke[i], current_stroke[i + 1])
+                    estimated_time += distance_by_laser(last_point, current_stroke[0]) * self.pulse_per_pixel[0] * LASER_OFF_RATE / 1000
+                    estimated_time += current_stoke_length * self.pulse_per_pixel[0] * LASER_ON_RATE / 1000
+                    last_point = current_stroke[-1]
+                current_stroke = []
+                current_stoke_length = 0
+            else:
+                current_stroke.append(point)
+
+        if len(current_stroke) > 1:
+            for i in range(len(current_stroke) - 1):
+                current_stoke_length += distance_by_laser(current_stroke[i], current_stroke[i + 1])
+            estimated_time += distance_by_laser(last_point, current_stroke[0]) * self.pulse_per_pixel[0] * LASER_OFF_RATE / 1000
+            estimated_time += current_stoke_length * self.pulse_per_pixel[0] * LASER_ON_RATE / 1000
+            last_point = current_stroke[-1]
+        
+        # same with frame:
+        current_stroke = []
+        current_stoke_length = 0
+
+        for point in self.frame_points:
+            if point is None:
+                if len(current_stroke) > 1:
+                    for i in range(len(current_stroke) - 1):
+                        current_stoke_length += distance_by_laser(current_stroke[i], current_stroke[i + 1])
+                    estimated_time += distance_by_laser(last_point, current_stroke[0]) * self.pulse_per_pixel[0] * LASER_OFF_RATE / 1000
+                    estimated_time += current_stoke_length * self.pulse_per_pixel[0] * FRAME_RATE / 1000
+                    last_point = current_stroke[-1]
+                current_stroke = []
+                current_stoke_length = 0
+            else:
+                current_stroke.append(point)
+
+        if len(current_stroke) > 1:
+            for i in range(len(current_stroke) - 1):
+                current_stoke_length += distance_by_laser(current_stroke[i], current_stroke[i + 1])
+            estimated_time += distance_by_laser(last_point, current_stroke[0]) * self.pulse_per_pixel[0] * LASER_OFF_RATE / 1000
+            estimated_time += current_stoke_length * self.pulse_per_pixel[0] * FRAME_RATE / 1000
+            last_point = current_stroke[-1]
+
+        return estimated_time

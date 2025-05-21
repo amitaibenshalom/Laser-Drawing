@@ -27,8 +27,8 @@ class Button(object):
         self.execute_on_release = execute_on_release  # if the function should be executed on release
 
         self.image = pygame.image.load(os.path.join(ASSETS_DIR, images_paths[0])).convert_alpha()  # load the image when not clicked
-        self.image_clicked = pygame.image.load(os.path.join(ASSETS_DIR, images_paths[1])).convert_alpha()
         self.image = pygame.transform.scale(self.image, (self.size[0], self.size[1]))
+        self.image_clicked = pygame.image.load(os.path.join(ASSETS_DIR, images_paths[1])).convert_alpha()
         self.image_clicked = pygame.transform.scale(self.image_clicked, (self.size[0], self.size[1]))
 
         self.enabled = True  # if the button is enabled

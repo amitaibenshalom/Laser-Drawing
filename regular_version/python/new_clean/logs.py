@@ -1,6 +1,6 @@
 """
 Filename: logs.py
-Purpose: Logging functions for the car plotter exhibit
+Purpose: Logging functions for the exhibit
 """
 
 import logging

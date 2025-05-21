@@ -1,6 +1,6 @@
 """
 Filename: main.py
-Purpose: Main file for the exhibit
+Purpose: Main file for the exhibit - run me
 """
 
 import pygame
@@ -29,8 +29,7 @@ def main():
         screen = pygame.display.set_mode(VIEWPORT)
         view_port = VIEWPORT
     
-    # asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, view_port)
-    ui = Ui(screen, view_port)
+    ui = Ui(screen, view_port, logger)
 
     mouse_down = False
     running = True
@@ -38,6 +37,10 @@ def main():
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                 running = False
+
+            if event.type == KEYDOWN:
+                if event.key == K_e:
+                    ui.show_estimated_time = not ui.show_estimated_time
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
