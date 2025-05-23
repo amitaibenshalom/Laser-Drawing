@@ -30,8 +30,11 @@ class Button(object):
         self.image = pygame.transform.scale(self.image, (self.size[0], self.size[1]))
         self.image_clicked = pygame.image.load(os.path.join(ASSETS_DIR, images_paths[1])).convert_alpha()
         self.image_clicked = pygame.transform.scale(self.image_clicked, (self.size[0], self.size[1]))
+        self.another_image = pygame.image.load(os.path.join(ASSETS_DIR, images_paths[2])).convert_alpha() if len(images_paths) > 2 else None
+        self.another_image = pygame.transform.scale(self.image_clicked, (self.size[0], self.size[1])) if self.another_image else None
 
         self.enabled = True  # if the button is enabled
+        self.locked = False  # to lock the button state
         self.clicked = False  # if the button is clicked
         self.current_image = self.image  # the image to draw on the button (this will be changed when the button is clicked)
 
@@ -39,6 +42,8 @@ class Button(object):
         """
         Update the button state, draw the button on the screen and call the function if clicked
         """
+        if self.locked:
+            return
 
         mouse = pygame.mouse.get_pos()
         click = pygame.mouse.get_pressed()
@@ -72,6 +77,12 @@ class Button(object):
             self.clicked = False
             self.current_image = self.image
             self.enabled = True
+    
+    def lock(self):
+        self.lock = True
+    
+    def unlock(self):
+        self.lock = False
 
     def render(self):
         self.screen.blit(self.current_image, (self.pos[0], self.pos[1]))

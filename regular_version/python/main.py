@@ -56,6 +56,7 @@ def main():
             mouse_pos = pygame.mouse.get_pos()
             ui.handle_point(mouse_pos)
 
+        ui.handle_laser()
         ui.render_screen()
 
         pygame.display.flip()

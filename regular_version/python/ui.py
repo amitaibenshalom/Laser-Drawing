@@ -7,6 +7,8 @@ import pygame
 from consts import *
 from asset_loader import *
 from button import Button
+from laser import Laser
+from datetime import datetime
 import math
 
 
@@ -25,12 +27,13 @@ class Ui:
         self.center_inside_borders = ((self.border_line_left + self.border_line_right) // 2, (self.border_line_top + self.border_line_bottom) // 2)
         self.center = (view_port[0] // 2, view_port[1] // 2)
 
+        cutting_area_height = self.border_line_bottom - self.border_line_top
+        cutting_area_width = cutting_area_height
+        self.cutting_area_size = (cutting_area_width, cutting_area_height)
+        self.cutting_area_pos = (self.center_inside_borders[0] - self.cutting_area_size[0] // 2, self.center_inside_borders[1] - self.cutting_area_size[1] // 2)
         self.cutting_area_color = CUTTING_AREA_COLOR
-        self.cutting_area_height = self.border_line_bottom - self.border_line_top
-        self.cutting_area_width = self.cutting_area_height
-        self.cutting_area_pos = (self.center_inside_borders[0] - self.cutting_area_width // 2, self.center_inside_borders[1] - self.cutting_area_height // 2)
 
-        self.screen_to_laser_scale = [LASER_BOARD_SIZE[0] / self.cutting_area_width, LASER_BOARD_SIZE[1] / self.cutting_area_height]  # scale from the screen to the board on arduino in mm per pixel
+        self.screen_to_laser_scale = [LASER_BOARD_SIZE[0] / self.cutting_area_size[0], LASER_BOARD_SIZE[1] / self.cutting_area_size[1]]  # scale from the screen to the board on arduino in mm per pixel
         self.pulse_per_pixel = [self.screen_to_laser_scale[0] / MM_PER_PULSE[0], self.screen_to_laser_scale[1] / MM_PER_PULSE[1]]  # pulse per pixel for each motor
 
         # dict of picture names, their sizes and position to load on screen
@@ -43,7 +46,7 @@ class Ui:
             "draw": (("6%", None), ("89%", "22%"), ("pencil.png", "pencilPressed.png"), self.drawing_mode_on, True),
             "erase": (("6%", None), ("89%", "37%"), ("eraser.png", "eraserPressed.png"), self.erasing_mode_on, True),
             "clear": (("6%", None), ("89%", "52%"), ("garbage.png", "garbagePressed.png"), self.clear_all, False),
-            "print": (("6%", None), ("89%", "77%"), ("printer.png", "printerPressed.png"), self.print_drawing, False),
+            "print": (("6%", None), ("89%", "77%"), ("printer.png", "printerPressed.png", "printerOff.png"), self.send_to_laser, False),
             "heart": (("7%", None), ("4%", "30%"), ("heart.jpg", "heartPressed.jpg"), self.frame_heart, True),
             "drop": (("7%", None), ("4%", "50%"), ("drop.jpg", "dropPressed.jpg"), self.frame_drop, True),
             "square": (("7%", None), ("4%", "70%"), ("square.jpg", "squarePressed.jpg"), self.frame_square, True)
@@ -56,9 +59,12 @@ class Ui:
         self.idle = False
         self.estimated_time = 0
         self.show_estimated_time = False
+        self.show_arduino_error = False
         self.asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, self.view_port)
         self.buttons = self.init_buttons(BUTTONS_CONFIGURATION)
+        self.laser = Laser(self.cutting_area_pos, self.cutting_area_size, logger=logger)
 
+        self.laser.send_initial_parameters()
         self.frame_heart()
 
         
@@ -87,6 +93,7 @@ class Ui:
         self.draw_frame()
         self.render_available_length()
         self.render_estimated_time()
+        self.render_arduino_error()
         
     def render_borders(self):
         pygame.draw.rect(self.screen, COLOR_OUTSIDE_BORDER, (0, 0, self.border_line_left, self.view_port[1]))
@@ -95,7 +102,7 @@ class Ui:
         pygame.draw.rect(self.screen, COLOR_OUTSIDE_BORDER, (0, self.border_line_bottom, self.view_port[0], self.view_port[1] - self.border_line_bottom))
 
     def render_cutting_area(self):
-        pygame.draw.rect(self.screen, self.cutting_area_color, (self.cutting_area_pos[0], self.cutting_area_pos[1], self.cutting_area_width, self.cutting_area_height))
+        pygame.draw.rect(self.screen, self.cutting_area_color, (self.cutting_area_pos[0], self.cutting_area_pos[1], self.cutting_area_size[0], self.cutting_area_size[1]))
 
     def render_buttons(self):
         for name, button in self.buttons.items():
@@ -126,7 +133,6 @@ class Ui:
 
         for name, button in self.buttons.items():
             button.render()
-
 
 
     def drawing_mode_on(self):
@@ -192,10 +198,52 @@ class Ui:
         self.points.clear()
 
         
-    def print_drawing(self):
-        print("Printing Drawing...")
-        print(self.points)
+    def send_to_laser(self):
+        if not self.laser.exist():
+            self.logger.error("Error: No Arduino is connected, skipping printing")
+            return
+            
+        if self.laser.is_drawing():
+            return
+        
+        self.buttons["print"].current_image = self.buttons["print"].another_image
+        self.buttons["print"].lock()
 
+        self.save_drawing_as_image()
+        # print(self.points)
+        self.laser.init_drawing(self.points.copy(), self.frame_points.copy())
+
+    def save_drawing_as_image(self):
+        x, y = self.cutting_area_pos
+        w, h = self.cutting_area_size
+        filename = os.path.join(DRAWINGS_DIR, datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
+        sub_surface = self.screen.subsurface(pygame.Rect(x, y, w, h)).copy()
+        pygame.image.save(sub_surface, filename)    
+
+    def handle_laser(self):
+        if not self.laser.is_drawing():
+            return
+        
+        status = self.laser.check_on_laser()
+        if status == "DONE":
+            self.buttons["print"].current_image = self.buttons["print"].image
+            self.buttons["print"].unlock()
+
+        elif status == "ERROR":
+            self.show_arduino_error = True
+
+        else:
+            self.show_arduino_error = False
+
+    def render_arduino_error(self):
+        if not self.show_arduino_error:
+            return
+        
+        font = pygame.font.SysFont(None, 50)
+        text_color = BLACK
+        text = font.render("Laser disconnected! reconnect it and try again.", True, text_color)
+        text_rect = text.get_rect(center=(self.view_port[0] // 2, self.view_port[1] // 2))
+        self.screen.blit(text, text_rect)
 
     def frame_heart(self):
         self.frame = HEART_FRAME
@@ -360,7 +408,7 @@ class Ui:
             return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
 
         estimated_time = 0
-        last_point = [self.center_inside_borders[0] - self.cutting_area_width // 2, self.center_inside_borders[1] - self.cutting_area_height // 2]
+        last_point = [self.center_inside_borders[0] - self.cutting_area_size[0] // 2, self.center_inside_borders[1] - self.cutting_area_size[1] // 2]
         current_stroke = []
         current_stoke_length = 0
 
