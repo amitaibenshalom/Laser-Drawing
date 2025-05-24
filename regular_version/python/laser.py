@@ -107,13 +107,13 @@ class Laser():
         
         self.logger.info("Sending initial parameters for Arduino")
 
-        try:
+        try:        
             self.send_values("PARAMS")
             self.send_values(*self.laser_cutting_pos,
                              self.laser_cutting_pos[0] + self.laser_cutting_size[0], 
                              self.laser_cutting_pos[1] + self.laser_cutting_size[1],
                              delay=True)
-            self.send_values(LASER_POWER, LASER_POWER, LASER_OFF_RATE, LASER_ON_RATE, FRAME_RATE, MAX_DC_MOTOR_TIME * 1000, delay=True)
+            self.send_values(LASER_POWER, FRAME_POWER, LASER_OFF_RATE, LASER_ON_RATE, FRAME_RATE, MAX_DC_MOTOR_TIME * 1000, delay=True)
             self.logger.info("Waiting for 'OK'...")
 
             start = time.time()
@@ -123,7 +123,6 @@ class Laser():
 
                     if response == b"OK":
                         self.logger.info("Got OK - Arduino acknowledged parameters")
-                        self.send_initial_parameters = True
                         return True
                     
                     else:
@@ -184,14 +183,14 @@ class Laser():
             self.send_values("D_DONE" if self.mode == "drawing_points" else "F_DONE")  # drawing done or frame done
             self.waiting_for_ack = False
             return "DONE"
-
+        
         batch = points[self.index:self.index + self.batch_size]
+        print(batch)
         for point in batch:
             if point is None:
                 self.send_values("None")
             else:
                 x, y = point
-                # laser_x, laser_y = (x - self.laser_cutting_area[0])* self.screen_scale[0], (y - self.laser_cutting_area[1])* self.screen_scale[1]
                 self.send_values(f"{x},{y}")
 
         self.send_values("B_DONE")  # batch done

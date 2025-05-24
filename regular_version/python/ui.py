@@ -64,7 +64,6 @@ class Ui:
         self.buttons = self.init_buttons(BUTTONS_CONFIGURATION)
         self.laser = Laser(self.cutting_area_pos, self.cutting_area_size, logger=logger)
 
-        self.laser.send_initial_parameters()
         self.frame_heart()
 
         
@@ -207,13 +206,16 @@ class Ui:
             return
         
         self.buttons["print"].current_image = self.buttons["print"].another_image
-        self.buttons["print"].lock()
+        # self.buttons["print"].lock()
 
         self.save_drawing_as_image()
         # print(self.points)
         self.laser.init_drawing(self.points.copy(), self.frame_points.copy())
 
     def save_drawing_as_image(self):
+        os.makedirs(DRAWINGS_DIR, exist_ok=True)  # create the drawings folder if it doesn't exist
+        self.draw_lines()
+        self.draw_frame()
         x, y = self.cutting_area_pos
         w, h = self.cutting_area_size
         filename = os.path.join(DRAWINGS_DIR, datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
@@ -222,6 +224,15 @@ class Ui:
 
     def handle_laser(self):
         if not self.laser.is_drawing():
+            try:
+                if self.laser.arduino.in_waiting:
+                    response = self.laser.arduino.readline().strip()
+                    self.logger.info(f"Arduino sent: {response}")
+
+                    if not self.laser.sent_init_params:
+                        self.laser.send_initial_parameters()  # wait until arduino sends first message
+            except:
+                pass
             return
         
         status = self.laser.check_on_laser()
