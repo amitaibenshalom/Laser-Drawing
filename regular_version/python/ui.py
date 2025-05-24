@@ -259,11 +259,10 @@ class Ui:
         if not self.show_arduino_error:
             return
         
-        font = pygame.font.SysFont(None, 50)
-        text_color = BLACK
+        font = pygame.font.SysFont(None, int(0.025 * self.view_port[0]))
+        text_color = RED
         text = font.render("Laser disconnected! reconnect it and restart", True, text_color)
-        text_rect = text.get_rect(center=(self.view_port[0] // 2, self.view_port[1] // 2))
-        self.screen.blit(text, text_rect)
+        self.screen.blit(text, (self.border_line_left, self.border_line_top))
 
     def frame_heart(self):
         self.frame = HEART_FRAME
@@ -397,24 +396,24 @@ class Ui:
             
             last_point = point
 
-    def render_available_length(self, width="15%", height="4%"):
+    def render_available_length(self, width="12%", height="3%"):
         available_length_precentage = max(0, min(100, int((1 - (self.total_drawing_length() / MAX_LENGTH)) * 100)))
 
         width = convert_to_pixels(width, self.view_port[0])
         height = convert_to_pixels(height, self.view_port[1])
-        font = pygame.font.SysFont(None, 60)
+        font = pygame.font.SysFont(None, int(0.03 * self.view_port[0]))
         text_color = BLACK
         rect_color = THE_RED_THAT_IS_ON_THE_BUTTONS
         bg_color = BLACK
         text = font.render(f"{available_length_precentage}%", True, text_color)
-        self.screen.blit(text, (self.border_line_right - text.get_width() // 2, (self.border_line_top - text.get_height() - height) // 2))
-        pygame.draw.rect(self.screen, bg_color, (self.border_line_right - width // 2, (self.border_line_top - height + text.get_height()) // 2, width, height))
-        pygame.draw.rect(self.screen, rect_color, (self.border_line_right - width // 2, (self.border_line_top - height + text.get_height()) // 2, width * (available_length_precentage / 100), height))
+        self.screen.blit(text, ((self.border_line_right + (self.view_port[0] - self.border_line_right) // 2) - text.get_width() // 2, (self.border_line_top - text.get_height() - height) // 2))
+        pygame.draw.rect(self.screen, bg_color, ((self.border_line_right + (self.view_port[0] - self.border_line_right) // 2) - width // 2, (self.border_line_top - height + text.get_height()) // 2, width, height))
+        pygame.draw.rect(self.screen, rect_color, ((self.border_line_right + (self.view_port[0] - self.border_line_right) // 2) - width // 2, (self.border_line_top - height + text.get_height()) // 2, width * (available_length_precentage / 100), height))
 
     def render_estimated_time(self):
         if not self.show_estimated_time:
             return
-        font = pygame.font.SysFont(None, 50)
+        font = pygame.font.SysFont(None, int(0.03 * self.view_port[0]))
         text_color = BLACK
         text = font.render(f"{max(self.estimated_time - time.time() + self.laser.drawing_start_time, 0):.1f}", True, text_color)
         self.screen.blit(text, (self.buttons["print"].pos[0] + self.buttons["print"].size[0] // 2 - text.get_width() // 2, self.buttons["print"].pos[1] + self.buttons["print"].size[1] + 5))
