@@ -52,7 +52,7 @@ void loop() {
         case 7: LASER_ON_RATE = value; break;
         case 8: FRAME_RATE = value; break;
         case 9: MAX_DC_MOTOR_TIME = value; break;
-        default: Serial.println("ERROR IN GETTING PARAMETERS"); break;
+        default: Serial.print("PARAM INDEX: "); Serial.println(param_index); break;
       }
     }
     param_index++;
@@ -68,8 +68,8 @@ void loop() {
     if (input == BATCH_DONE_KEY) {
       drawing_batch = true;
       point_index = 0;
-      laser_off();
-      rate = LASER_OFF_RATE;
+      // laser_off();
+      // rate = LASER_OFF_RATE;
       if (points[0] == -1)
         is_destination_done = true;  // do not actually try to go to -1...
       else
@@ -130,7 +130,7 @@ void loop() {
       if (points[point_index] == -1) {
         laser_off();
         rate = LASER_OFF_RATE;
-        set_destination(points[0], points[1]);  // put -1 in the destination, will be used later
+        set_destination(points[point_index], points[point_index + 1]);  // put -1 in the destination, will be used later
         is_destination_done = true;  // do not actually try to go to -1...
       }
       else {
@@ -141,6 +141,8 @@ void loop() {
     else {
       Serial.println(ACK_KEY);
       drawing_batch = false;
+      point_index = 0;
+      batch_size = 0;
     }
   }
 

@@ -109,7 +109,8 @@ class Laser():
 
         try:        
             self.send_values("PARAMS")
-            self.send_values(*self.laser_cutting_pos,
+            self.send_values(self.laser_cutting_pos[0],
+                             self.laser_cutting_pos[1],
                              self.laser_cutting_pos[0] + self.laser_cutting_size[0], 
                              self.laser_cutting_pos[1] + self.laser_cutting_size[1],
                              delay=True)
@@ -123,6 +124,7 @@ class Laser():
 
                     if response == b"OK":
                         self.logger.info("Got OK - Arduino acknowledged parameters")
+                        self.sent_init_params = True
                         return True
                     
                     else:
@@ -130,14 +132,12 @@ class Laser():
                         self.arduino = None
                         return False
                     
-            print("Error: No 'OK' from Arduino")
             self.logger.error("Error: No 'OK' from Arduino")
             self.arduino = None
             return False
 
         except serial.SerialException as e:
-            print(f"[ERROR] Failed during transmission: {e}")
-            self.logger.error(f"ERROR: Failed during transmission: {e}")
+            self.logger.error(f"Error: Failed during transmission: {e}")
             self.arduino = None
             return False
 
@@ -155,7 +155,6 @@ class Laser():
             return True
         
         except:
-            print(f"[ERROR] Failed during transmission")
             self.logger.error(f"Error: Failed during transmission")
             return False
 
@@ -163,8 +162,8 @@ class Laser():
         # Waiting for Arduino ACK (ack of finishing drawing the batch)
         if self.waiting_for_ack:
             if self.arduino.in_waiting:
-                line = self.arduino.readline().decode().strip()
-                if line == "OK":
+                line = self.arduino.readline().strip()
+                if line == b"OK":
                     self.waiting_for_ack = False
                     self.last_time_sent_data = None
                 else:
@@ -185,7 +184,6 @@ class Laser():
             return "DONE"
         
         batch = points[self.index:self.index + self.batch_size]
-        print(batch)
         for point in batch:
             if point is None:
                 self.send_values("None")
@@ -210,6 +208,9 @@ class Laser():
         self.waiting_for_ack = False
 
     def check_on_laser(self):
+        if not self.exist:
+            return "ERROR"
+        
         if not self.drawing:
             return "NOT DRAWING"
         
@@ -217,7 +218,6 @@ class Laser():
             status = self.send_batch_points()
 
             if status == "RESET":
-                print("Timeout waiting for Arduino. Stopping transmission.")
                 self.logger.error("Error: Timeout waiting for Arduino. Stopping transmission.")
                 self.end_drawing()
                 return "DONE"
@@ -231,7 +231,6 @@ class Laser():
                 
                 # if got to here, than finished drawing the frame points - fully done!
                 total_time = f"{(time.time() - self.drawing_start_time):.1f}"
-                print(f"Finished drawing in {total_time} seconds")
                 self.logger.error(f"Finished drawing in {total_time} seconds")
                 self.end_drawing()
                 return "DONE"

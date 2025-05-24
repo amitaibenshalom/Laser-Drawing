@@ -9,6 +9,7 @@ from asset_loader import *
 from button import Button
 from laser import Laser
 from datetime import datetime
+import time
 import math
 
 
@@ -130,6 +131,9 @@ class Ui:
             self.buttons["drop"].current_image = self.buttons["drop"].image
             self.buttons["square"].current_image = self.buttons["square"].image_clicked
 
+        if self.laser.is_drawing():
+            self.buttons["print"].current_image = self.buttons["print"].another_image
+
         for name, button in self.buttons.items():
             button.render()
 
@@ -204,12 +208,10 @@ class Ui:
             
         if self.laser.is_drawing():
             return
-        
-        self.buttons["print"].current_image = self.buttons["print"].another_image
-        # self.buttons["print"].lock()
 
         self.save_drawing_as_image()
-        # print(self.points)
+        self.estimated_time = self.calc_estimated_time()
+        self.show_estimated_time = True
         self.laser.init_drawing(self.points.copy(), self.frame_points.copy())
 
     def save_drawing_as_image(self):
@@ -228,17 +230,20 @@ class Ui:
                 if self.laser.arduino.in_waiting:
                     response = self.laser.arduino.readline().strip()
                     self.logger.info(f"Arduino sent: {response}")
+                    self.show_arduino_error = False
 
                     if not self.laser.sent_init_params:
                         self.laser.send_initial_parameters()  # wait until arduino sends first message
             except:
-                pass
-            return
+                self.show_arduino_error = True
+                self.laser.arduino = None
+
+            finally:
+                return
         
         status = self.laser.check_on_laser()
         if status == "DONE":
-            self.buttons["print"].current_image = self.buttons["print"].image
-            self.buttons["print"].unlock()
+            self.show_estimated_time = False
 
         elif status == "ERROR":
             self.show_arduino_error = True
@@ -252,7 +257,7 @@ class Ui:
         
         font = pygame.font.SysFont(None, 50)
         text_color = BLACK
-        text = font.render("Laser disconnected! reconnect it and try again.", True, text_color)
+        text = font.render("Laser disconnected! reconnect it and restart", True, text_color)
         text_rect = text.get_rect(center=(self.view_port[0] // 2, self.view_port[1] // 2))
         self.screen.blit(text, text_rect)
 
@@ -405,11 +410,9 @@ class Ui:
     def render_estimated_time(self):
         if not self.show_estimated_time:
             return
-        
-        self.estimated_time = self.calc_estimated_time()
         font = pygame.font.SysFont(None, 50)
         text_color = BLACK
-        text = font.render(f"{self.estimated_time:.1f}", True, text_color)
+        text = font.render(f"{max(self.estimated_time - time.time() + self.laser.drawing_start_time, 0):.1f}", True, text_color)
         self.screen.blit(text, (self.buttons["print"].pos[0] + self.buttons["print"].size[0] // 2 - text.get_width() // 2, self.buttons["print"].pos[1] + self.buttons["print"].size[1] + 5))
 
     def calc_estimated_time(self):
