@@ -203,10 +203,14 @@ class Ui:
         
     def send_to_laser(self):
         if not self.laser.exist():
-            self.logger.error("Error: No Arduino is connected, skipping printing")
+            self.logger.error("Error: No Arduino is connected, skipping")
             return
             
         if self.laser.is_drawing():
+            return
+        
+        if len(self.points) == 0:
+            self.logger.info("Clicked on print button with empty drawing, skipping")
             return
 
         self.save_drawing_as_image()
