@@ -39,8 +39,9 @@ class Ui:
 
         # dict of picture names, their sizes and position to load on screen
         PICTURES_TO_LOAD = {
-            "textAbove2.jpg": (("43%", "15%"), ("center", "2%")),
-            "frame.jpg": (("7%", None), ("4%", "15%")),
+            "textAbove2.jpg": (("43%", "15%"), ("center", "2%"), True),
+            "frame.jpg": (("7%", None), ("4%", "15%"), True),
+            "empty_drawing.jpg": (("43%", "30%"), ("center", "center"), False),
         }
 
         BUTTONS_CONFIGURATION = {
@@ -57,10 +58,12 @@ class Ui:
         self.mode = DRAWING_MODE
         self.frame_points = []
         self.frame = None
-        self.idle = False
         self.estimated_time = 0
         self.show_estimated_time = False
         self.show_arduino_error = False
+        self.idle = [False, 0]  # [0] = is idle flag, [1] = last time touched screen
+        self.empty_notification = [False, 0]  # if clicked on drawing with empty drawing, [1] = init time when showed notification
+
         self.asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, self.view_port)
         self.buttons = self.init_buttons(BUTTONS_CONFIGURATION)
         self.laser = Laser(self.cutting_area_pos, self.cutting_area_size, logger=logger)
@@ -87,13 +90,14 @@ class Ui:
         self.screen.fill(BACKGROUND_COLOR)
         self.render_borders()
         self.render_cutting_area()
-        self.asset_loader.render(self.screen)
+        self.asset_loader.render_all(self.screen)
         self.render_buttons()
         self.draw_lines()
         self.draw_frame()
         self.render_available_length()
         self.render_estimated_time()
         self.render_arduino_error()
+        self.render_empty_notification()
         
     def render_borders(self):
         pygame.draw.rect(self.screen, COLOR_OUTSIDE_BORDER, (0, 0, self.border_line_left, self.view_port[1]))
@@ -136,6 +140,13 @@ class Ui:
 
         for name, button in self.buttons.items():
             button.render()
+
+    def render_empty_notification(self):
+        if self.empty_notification[0]:
+            if time.time() - self.empty_notification[1] <= 3: 
+                self.asset_loader.render(self.screen, "empty_drawing")
+            else:
+                self.empty_notification[0] = False
 
 
     def drawing_mode_on(self):
@@ -200,7 +211,7 @@ class Ui:
     def clear_all(self):
         self.points.clear()
 
-        
+
     def send_to_laser(self):
         if not self.laser.exist():
             self.logger.error("Error: No Arduino is connected, skipping")
@@ -210,6 +221,8 @@ class Ui:
             return
         
         if len(self.points) == 0:
+            self.empty_notification[0] = True
+            self.empty_notification[1] = time.time() 
             self.logger.info("Clicked on print button with empty drawing, skipping")
             return
 

@@ -45,7 +45,7 @@ class AssetLoader:
             
             if filename.endswith('.png') or filename.endswith('.jpg') or filename.endswith('.jpeg') or filename.endswith('.gif'):
                 image_path = os.path.join(self.folder_path, filename)
-                size, pos = size_pos
+                size, pos, always_render = size_pos
                 new_size, new_pos = [0, 0], [0, 0]
 
                 # calculate the size
@@ -73,7 +73,7 @@ class AssetLoader:
                         new_pos[k] = 0
                         continue
                     if pos[k] == "center":
-                        new_pos[k] = int((self.viewport_size[k] - new_size[k]) / 2)
+                        new_pos[k] = (self.viewport_size[k] - new_size[k]) // 2
                         continue
                     if pos[k] == "left":
                         new_pos[k] = 0
@@ -99,21 +99,25 @@ class AssetLoader:
                 
                 pictures[filename.split('.')[0]] = [pygame.transform.scale(
                     pygame.image.load(image_path).convert_alpha(), new_size
-                ), new_pos]
+                ), new_pos, always_render]
             else:
                 print(f"Skipping non-image file: {filename}")
         
         return pictures
 
 
-    def render(self, screen):
+    def render_all(self, screen):
         """
         Render all loaded pictures on the screen at their specified positions.
         :param screen: The screen to render the pictures on.
         """
-        for _, (image, pos) in self.pictures.items():
-            screen.blit(image, pos)
+        for _, (image, pos, always_render) in self.pictures.items():
+            if always_render:
+                screen.blit(image, pos)
 
+    def render(self, screen, name):
+        image, pos, _ = self.pictures[name]
+        screen.blit(image, pos)
 
 def convert_to_pixels(value, viewport):
         """
