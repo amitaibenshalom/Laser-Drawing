@@ -236,19 +236,6 @@ class Laser():
             if status == "SUCCESS":  # finished drawing (user points + frame) and DC motor finished
                 self.end_drawing()
                 return "DONE"
-
-            # if status == "DONE":
-            #     # if self.mode == "user_points":
-            #     #     # done only user points, now send frame points
-            #     #     self.mode = "frame_points"
-            #     #     self.index = 0
-            #     #     return "DRAWING"
-                
-            #     # if got to here, than finished drawing the frame points - fully done!
-            #     total_time = f"{(time.time() - self.drawing_start_time):.1f}"
-            #     self.logger.error(f"Finished drawing in {total_time} seconds")
-            #     self.end_drawing()
-            #     return "DONE"
             
             return "DRAWING"
         

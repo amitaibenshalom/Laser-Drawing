@@ -53,14 +53,12 @@ MAX_SIZE_PER_LOG_FILE = 1 * 1024 * 1024  # 1MB
 BACKUP_COUNT = 10  # max number of log files, if all 10 are full, the first one will be deleted, rotating the rest 
 
 # idle
-IDLE_TIME = 100 # seconds
+IDLE_TIME = 180  # seconds
 
 # laser values
-# LASER_DRAWING_TIMEOUT = 5  # seconds
 ARDUINO_DRAWING_BATCH_TIMEOUT = 20  # for each batch of points, wait at most this time for the laser to draw
 INIT_PARAMS_TIMEOUT = 2  # ack for params timeout
 POINTS_BATCH_SIZE = 8  # each time send this many points to the laser to draw
-# ARDUINO_TIME_DELAY = 0.01  # seconds
 
 LASER_POWER = 255  # (0 <= x <= 255)
 FRAME_POWER = 255  # (0 <= x <= 255)
@@ -71,10 +69,3 @@ MAX_DC_MOTOR_TIME = 1.5  # seconds
 
 MM_PER_PULSE = [0.2, 0.2]  # mm per pulse for each motor
 LASER_BOARD_SIZE = [83.0, 83.0]  # size of the board in mm
-
-# found_arduino = False
-# send_to_arduino = False
-# drawing_curve = False
-# curve_index = 0
-# waiting = [False,False]  # two flags to indicate if we are waiting for the arduino to send us data: first is reading a curve, second is drawing one
-# last_time = [0, 0]  # to limit the time we wait for the arduino to send us data

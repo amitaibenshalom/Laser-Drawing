@@ -39,7 +39,7 @@ class Ui:
 
         # dict of picture names, their sizes and position to load on screen
         PICTURES_TO_LOAD = {
-            "textAbove2.jpg": (("43%", "15%"), ("center", "2%"), False),
+            "title.png": (("38%", "17%"), ("center", 0), True),
             "frame.jpg": (("7%", None), ("4%", "15%"), False),
             "empty_drawing.jpg": (("40%", "35%"), ("center", "center"), False),
             "preview.jpg": (("40%", "60%"), ("center", "center"), False),
@@ -62,7 +62,7 @@ class Ui:
         self.estimated_time = 0
         self.show_estimated_time = False
         self.show_arduino_error = False
-        self.idle = [False, 0]  # [0] = is idle flag, [1] = last time touched screen
+        self.last_touch_idle = 0  # idle stopwatch
         self.empty_notification = [False, 0]  # if clicked on drawing with empty drawing, [1] = init time when showed notification
         self.show_preview = False  # after clicking print button, show preview
 
@@ -86,14 +86,12 @@ class Ui:
             button = Button(self.screen, pos, size, images, function, keep_pressed_image)
             buttons[name] = button
         return buttons
-
     
     def render_screen(self):
         self.screen.fill(BACKGROUND_COLOR)
         self.render_borders()
         self.render_cutting_area()
         self.asset_loader.render_all(self.screen)
-        self.render_above_text()
         self.render_buttons()
         self.draw_lines()
         self.draw_frame()
@@ -151,16 +149,10 @@ class Ui:
             else:
                 self.empty_notification[0] = False
 
-    def render_above_text(self):
-        font = pygame.font.Font(os.path.join(ASSETS_DIR, "fonts", "dejavu-sans_book.ttf"), int(0.02 * self.view_port[0]))  
-        text_color = BLACK
-        lines = [("ציירו על המסך ושלחו ללייזר", True), ("ارسم على الشاشة وأرسلها إلى الليزر", True), ("Draw on the screen and send to laser", False)] 
-        height = convert_to_pixels("1%", self.view_port[1])
-        for line, rtl in lines:
-            line = line[::-1] if rtl else line
-            text = font.render(line, True, text_color)
-            self.screen.blit(text, (self.center[0] - text.get_width() // 2, height))
-            height += text.get_height()
+    def check_idle(self):
+        if time.time() - self.last_touch_idle > IDLE_TIME:
+            self.points.clear()
+            self.last_touch_idle = time.time()
 
     def drawing_mode_on(self):
         self.mode = DRAWING_MODE

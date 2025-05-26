@@ -3,6 +3,7 @@ Filename: main.py
 Purpose: Main file for the exhibit - run me
 """
 
+import time
 import pygame
 from pygame.locals import *
 from consts import *
@@ -38,24 +39,23 @@ def main():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                 running = False
 
-            if event.type == KEYDOWN:
-                if event.key == K_e:
-                    ui.show_estimated_time = not ui.show_estimated_time
-
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     mouse_down = True      
                     ui.handle_point(event.pos)
+                    ui.last_touch_idle = time.time()
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:  # Left click released
                     mouse_down = False
                     ui.end_stroke()
+                    ui.last_touch_idle = time.time()
     
         if mouse_down:
             mouse_pos = pygame.mouse.get_pos()
             ui.handle_point(mouse_pos)
 
+        ui.check_idle()
         ui.handle_laser()
         ui.render_screen()
 
