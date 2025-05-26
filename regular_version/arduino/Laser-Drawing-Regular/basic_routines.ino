@@ -245,6 +245,7 @@ void laser_off() {
 void dc_motor_on() {
   analogWrite(DC_MOTOR_OUT, dc_motor_power);
   is_dc_motor_on = true;
+  last_time_dc_motor = millis();
 }
 
 // turn DC motor off

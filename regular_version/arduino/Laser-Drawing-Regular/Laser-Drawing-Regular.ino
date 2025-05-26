@@ -91,6 +91,8 @@ void loop() {
       rate = LASER_OFF_RATE;
       set_destination(0,0);
       is_destination_done = false;
+      // turn on dc motor
+      dc_motor_on();
     }
 
     if (input == "None") {
@@ -146,7 +148,7 @@ void loop() {
     }
   }
 
-// check_dc_motor();
+  check_dc_motor();
 
   update_rates();
   

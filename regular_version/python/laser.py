@@ -21,18 +21,19 @@ class Laser():
         self.points = []
         self.frame_points = []
         self.index = 0
-        self.mode = "drawing_points"  # drawing_points OR frame_points - which to send right now
+        self.mode = "user_points"  # user_points OR frame_points - which to send right now
         self.batch_size = POINTS_BATCH_SIZE
-        # self.screen_scale = (LASER_BOARD_SIZE[0] / laser_cutting_area[2], LASER_BOARD_SIZE[1] / laser_cutting_area[3])
 
         self.last_time_sent_data = time.time()
         self.waiting_for_ack = False
         self.drawing_start_time = time.time()
+        self.dc_motor_on = False
+        self.last_dc_motor_time = time.time()
 
         self.arduino = self.open_serial_connection()
         self.last_time_tried_to_connect = time.time()
 
-    
+
     def find_arduino_port(self):
         """
         Locate the Arduino's serial port (e.g., ttyUSB0 or ttyACM0 on Linux).
@@ -40,28 +41,13 @@ class Laser():
         ports = serial.tools.list_ports.comports()
 
         for port in ports:
-            # Check if the device description matches an Arduino
-            # print(f"port: {port}")
             if "Arduino" in port.description or "ttyUSB" in port.device or "ttyACM" in port.device:
                 print(f"Found Arduino on port {port.device}")
                 self.logger.info(f"Found Arduino on port: {port.device}")
 
-                # if hasattr(self.find_arduino_port, "already_sent_error"):
-                #     self.find_arduino_port.already_sent_error = False
-
                 return port.device
-        
-        # for not spamming the logs
-        # if not hasattr(self.find_arduino_port, "already_sent_error"):
-        #     self.find_arduino_port.already_sent_error = False
 
-        # if not self.find_arduino_port.already_sent_error:
-        #     self.logger.error("Error: Arduino not found")
-        #     print("Arduino not found")
-        #     self.find_arduino_port.already_sent_error = True
-
-        return None  # continue without Arduino
-
+        return None
 
     def open_serial_connection(self, timeout=1):
         """
@@ -147,7 +133,8 @@ class Laser():
         self.drawing = True
         self.drawing_start_time = time.time()
         self.waiting_for_ack = False
-        self.mode = "drawing_points"
+        self.dc_motor_on = False
+        self.mode = "user_points"
         self.logger.info("Started drawing...")
 
         try:
@@ -158,7 +145,7 @@ class Laser():
             self.logger.error(f"Error: Failed during transmission")
             return False
 
-    def send_batch_points(self):        
+    def get_status(self):        
         # Waiting for Arduino ACK (ack of finishing drawing the batch)
         if self.waiting_for_ack:
             if self.arduino.in_waiting:
@@ -171,19 +158,31 @@ class Laser():
 
             elif time.time() - self.last_time_sent_data > ARDUINO_DRAWING_BATCH_TIMEOUT:
                 self.send_values("RESET")
-                return "RESET" 
+                return "RESET"  # timeout error, abort
             
             else:
-                return "ACK"
+                return "ACK"  # waiting for arduino to acknowlage batch
+            
+        if self.dc_motor_on:
+            if time.time() - self.last_dc_motor_time > MAX_DC_MOTOR_TIME:
+                self.dc_motor_on = False
+                return "SUCCESS"
+            return "DC_MOTOR"  # dc motor still on
 
-        # Not waiting: send the next batch
-        points = self.points if self.mode == "drawing_points" else self.frame_points
+        points = self.points if self.mode == "user_points" else self.frame_points
+
         if self.index >= len(points):
-            self.send_values("D_DONE" if self.mode == "drawing_points" else "F_DONE")  # drawing done or frame done
+            status = "D_DONE" if self.mode == "user_points" else "F_DONE"
+            self.send_values(status)  # drawing done or frame done
+
+            if status == "F_DONE":
+                self.dc_motor_on = True
+                self.last_dc_motor_time = time.time()
+
             self.waiting_for_ack = False
-            return "DONE"
+            return status  # done points list (user points or frame points)
         
-        batch = points[self.index:self.index + self.batch_size]
+        batch = points[self.index:self.index + self.batch_size]  # get batch and send it
         for point in batch:
             if point is None:
                 self.send_values("None")
@@ -195,17 +194,16 @@ class Laser():
         self.index += self.batch_size
         self.waiting_for_ack = True
         self.last_time_sent_data = time.time()
-        return "ACK"
-
+        return "ACK"  # waiting for arduino to acknowlage batch
 
     def end_drawing(self):
         self.drawing = False
         self.points.clear()
         self.frame_points.clear()
         self.index = 0
-        self.mode = "drawing_points"
-        self.last_time_sent_data = time.time()
+        self.mode = "user_points"
         self.waiting_for_ack = False
+        self.dc_motor_on = False
 
     def check_on_laser(self):
         if not self.exist:
@@ -215,25 +213,42 @@ class Laser():
             return "NOT DRAWING"
         
         try:
-            status = self.send_batch_points()
+            status = self.get_status()
 
             if status == "RESET":
                 self.logger.error("Error: Timeout waiting for Arduino. Stopping transmission.")
                 self.end_drawing()
                 return "DONE"
             
-            if status == "DONE":
-                if self.mode == "drawing_points":
-                    # done only user points, now send frame points
-                    self.mode = "frame_points"
-                    self.index = 0
-                    return "DRAWING"
-                
-                # if got to here, than finished drawing the frame points - fully done!
+            if status == "ACK" or status == "DC_MOTOR":
+                return "DRAWING"
+            
+            if status == "D_DONE":  # finished drawing the points of the user (without frame)
+                self.mode = "frame_points"
+                self.index = 0
+                return "DRAWING"
+            
+            if status == "F_DONE":  # finished all drawing (user points + frame), dc motor is now on
                 total_time = f"{(time.time() - self.drawing_start_time):.1f}"
                 self.logger.error(f"Finished drawing in {total_time} seconds")
+                return "DRAWING"
+            
+            if status == "SUCCESS":  # finished drawing (user points + frame) and DC motor finished
                 self.end_drawing()
                 return "DONE"
+
+            # if status == "DONE":
+            #     # if self.mode == "user_points":
+            #     #     # done only user points, now send frame points
+            #     #     self.mode = "frame_points"
+            #     #     self.index = 0
+            #     #     return "DRAWING"
+                
+            #     # if got to here, than finished drawing the frame points - fully done!
+            #     total_time = f"{(time.time() - self.drawing_start_time):.1f}"
+            #     self.logger.error(f"Finished drawing in {total_time} seconds")
+            #     self.end_drawing()
+            #     return "DONE"
             
             return "DRAWING"
         
