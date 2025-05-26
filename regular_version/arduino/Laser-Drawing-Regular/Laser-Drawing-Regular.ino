@@ -39,6 +39,9 @@ void loop() {
   //  read_pushbuttons();
   bool got_input = (get_input() > 0);
 
+  if (got_input)
+    last_time_got_data = millis();
+
   if (getting_params && got_input) {
     int value = input.toInt();
     if (param_index < 4) {
@@ -154,6 +157,17 @@ void loop() {
   
   if (!is_destination_done) {
     move_to_destination();
+  }
+
+  // IMPORTANT: check if serial was disconnected while drawing, with a timeout of not getting any values
+  if (processing_drawing && is_destination_done && !drawing_batch && !got_input) {
+    if (millis() - last_time_got_data > SERIAL_TIMEOUT_ERROR) {
+      laser_off();
+      processing_drawing = false;
+      rate = LASER_OFF_RATE;
+      set_destination(0,0);
+      is_destination_done = false;
+    }
   }
 
   if (got_input) {

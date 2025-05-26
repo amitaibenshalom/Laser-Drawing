@@ -16,8 +16,8 @@ byte process_input()
     else if ((input.length() == 7)&&(input.substring(0,7) == "LED OFF")) {laser_off(); Serial.println("laser is OFF"); return 1;} 
     else if ((input.length() == 8) && (input.substring(0,4) == "RATE")) {read_rate(); return 1;}
     else if ((input.length() == 10) && (input.substring(0,6) == "DPOWER")) {read_dc_power(); return 1;}
-    else if ((input.length() == 10)&& (input.substring(0,10) == "DCMOTOR ON")) {dc_motor_on(); Serial.println("DC motor is ON"); return 1;} 
-    else if ((input.length() == 11)&&(input.substring(0,11) == "DCMOTOR OFF")) {dc_motor_off(); Serial.println("DC motor is OFF"); return 1;}
+    else if ((input.length() == 10)&& (input.substring(0,10) == "DCMOTOR ON")) {dc_motor_stay_on = true; dc_motor_on(); Serial.println("DC motor is ON"); return 1;} 
+    else if ((input.length() == 11)&&(input.substring(0,11) == "DCMOTOR OFF")) {dc_motor_stay_on = false; dc_motor_off(); Serial.println("DC motor is OFF"); return 1;}
     else if ((input.length() == 5)&&(input.substring(0,5) == START_KEY)) {init_drawing(); return 1;}
     else if ((input.length() == 6)&&(input.substring(0,6) == PARAMS_KEY)) {init_params(); return 1;}
     else if ((input.length() == 5)&&(input.substring(0,5) == RESET_KEY)) {reset(); return 1;}

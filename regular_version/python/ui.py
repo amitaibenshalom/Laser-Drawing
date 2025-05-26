@@ -261,7 +261,7 @@ class Ui:
         
         font = pygame.font.SysFont(None, int(0.025 * self.view_port[0]))
         text_color = RED
-        text = font.render("Laser disconnected! reconnect it and restart", True, text_color)
+        text = font.render("Laser disconnected! reconnect it and restart program", True, text_color)
         self.screen.blit(text, (self.border_line_left, self.border_line_top))
 
     def frame_heart(self):

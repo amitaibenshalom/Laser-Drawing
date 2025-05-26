@@ -67,6 +67,7 @@ uint16_t FRAME_RATE = 80;
 uint16_t MAX_DC_MOTOR_TIME = 1500;
 const uint8_t PARAMS_NUMBER = 10;
 const uint16_t TIME_DELAY_FOR_FRAME_CUTTING = 110; // delay in ms for letting the laser stay on a little longer for contour to be cut properly 
+const uint32_t SERIAL_TIMEOUT_ERROR = 5000;  // if drawing from python, and waiting for data exceeded this timeout, then turn laser off
 
 bool is_PBs_pressed = false ; // for enable/disable motors if no PB pressed
 bool motor_direction[NUMBER_OF_MOTORS] = {false, false}; // initialy asume arbitary direction - false count pulses down
@@ -76,9 +77,11 @@ uint16_t rates[NUMBER_OF_MOVES] = {MIN_RATE, MIN_RATE, MIN_RATE, MIN_RATE}; // i
 uint16_t homming_rates[NUMBER_OF_MOVES] = {HOMMING_RATE, HOMMING_RATE, HOMMING_RATE, HOMMING_RATE}; // initial value same rates
 
 uint32_t last_time_dc_motor = 0;
+uint32_t last_time_got_data = 0;
 
 bool is_laser_on = false;
 bool is_dc_motor_on = false;
+bool dc_motor_stay_on = false;
 
 //------------python related ---------------------
 const float tolerance_float = 0.1;
@@ -92,7 +95,6 @@ const String DRAWING_DONE_KEY = "D_DONE";
 const String FRAME_DONE_KEY = "F_DONE";
 const String RESET_KEY = "RESET";
 
-const int TIME_DELAY_ARDUINO = 10;
 bool processing_drawing = false;  // in the whole process of drawing (from start to finish)
 bool drawing_batch = false;  // physically now drawing the batch of points
 bool getting_params = false;  // if processing params

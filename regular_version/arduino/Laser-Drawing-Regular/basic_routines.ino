@@ -257,7 +257,7 @@ void dc_motor_off() {
 
 // check if need to turn off DC motor
 void check_dc_motor() {
-  if (millis() - last_time_dc_motor > MAX_DC_MOTOR_TIME) {
+  if (!dc_motor_stay_on && millis() - last_time_dc_motor > MAX_DC_MOTOR_TIME) {
     dc_motor_off();
   }
 }
