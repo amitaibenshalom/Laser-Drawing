@@ -39,16 +39,17 @@ class Ui:
 
         # dict of picture names, their sizes and position to load on screen
         PICTURES_TO_LOAD = {
-            "textAbove2.jpg": (("43%", "15%"), ("center", "2%"), True),
-            "frame.jpg": (("7%", None), ("4%", "15%"), True),
-            "empty_drawing.jpg": (("43%", "30%"), ("center", "center"), False),
+            "textAbove2.jpg": (("43%", "15%"), ("center", "2%"), False),
+            "frame.jpg": (("7%", None), ("4%", "15%"), False),
+            "empty_drawing.jpg": (("40%", "35%"), ("center", "center"), False),
+            "preview.jpg": (("40%", "60%"), ("center", "center"), False),
         }
 
         BUTTONS_CONFIGURATION = {
             "draw": (("6%", None), ("89%", "22%"), ("pencil.png", "pencilPressed.png"), self.drawing_mode_on, True),
             "erase": (("6%", None), ("89%", "37%"), ("eraser.png", "eraserPressed.png"), self.erasing_mode_on, True),
             "clear": (("6%", None), ("89%", "52%"), ("garbage.png", "garbagePressed.png"), self.clear_all, False),
-            "print": (("6%", None), ("89%", "77%"), ("printer.png", "printerPressed.png", "printerOff.png"), self.send_to_laser, False),
+            "print": (("6%", None), ("89%", "75%"), ("printer.png", "printerPressed.png", "printerOff.png"), self.send_to_laser, False),
             "heart": (("7%", None), ("4%", "30%"), ("heart.jpg", "heartPressed.jpg"), self.frame_heart, True),
             "drop": (("7%", None), ("4%", "50%"), ("drop.jpg", "dropPressed.jpg"), self.frame_drop, True),
             "square": (("7%", None), ("4%", "70%"), ("square.jpg", "squarePressed.jpg"), self.frame_square, True)
@@ -63,6 +64,7 @@ class Ui:
         self.show_arduino_error = False
         self.idle = [False, 0]  # [0] = is idle flag, [1] = last time touched screen
         self.empty_notification = [False, 0]  # if clicked on drawing with empty drawing, [1] = init time when showed notification
+        self.show_preview = False  # after clicking print button, show preview
 
         self.asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, self.view_port)
         self.buttons = self.init_buttons(BUTTONS_CONFIGURATION)
@@ -91,6 +93,7 @@ class Ui:
         self.render_borders()
         self.render_cutting_area()
         self.asset_loader.render_all(self.screen)
+        self.render_above_text()
         self.render_buttons()
         self.draw_lines()
         self.draw_frame()
@@ -148,6 +151,16 @@ class Ui:
             else:
                 self.empty_notification[0] = False
 
+    def render_above_text(self):
+        font = pygame.font.Font(os.path.join(ASSETS_DIR, "fonts", "dejavu-sans_book.ttf"), int(0.02 * self.view_port[0]))  
+        text_color = BLACK
+        lines = [("ציירו על המסך ושלחו ללייזר", True), ("ارسم على الشاشة وأرسلها إلى الليزر", True), ("Draw on the screen and send to laser", False)] 
+        height = convert_to_pixels("1%", self.view_port[1])
+        for line, rtl in lines:
+            line = line[::-1] if rtl else line
+            text = font.render(line, True, text_color)
+            self.screen.blit(text, (self.center[0] - text.get_width() // 2, height))
+            height += text.get_height()
 
     def drawing_mode_on(self):
         self.mode = DRAWING_MODE
@@ -166,7 +179,6 @@ class Ui:
         self.points = self.points[:idx]  # Remove the last stroke
 
     def point_to_segment_distance(self, p, p1, p2):
-        
         if p1 == p2:  # Handle the case where p1 == p2 (degenerate segment)
             return self.distance(p, p1)
     
