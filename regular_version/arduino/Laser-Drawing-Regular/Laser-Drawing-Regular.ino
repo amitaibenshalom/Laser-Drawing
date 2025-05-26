@@ -148,6 +148,7 @@ void loop() {
       drawing_batch = false;
       point_index = 0;
       batch_size = 0;
+      last_time_got_data = millis();
     }
   }
 

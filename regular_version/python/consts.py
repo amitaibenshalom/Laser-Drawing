@@ -64,8 +64,8 @@ LASER_POWER = 255  # (0 <= x <= 255)
 FRAME_POWER = 255  # (0 <= x <= 255)
 LASER_OFF_RATE = 6
 LASER_ON_RATE = 6
-FRAME_RATE = 6 # for green/yellow paper
-MAX_DC_MOTOR_TIME = 1.5  # seconds
+FRAME_RATE = 50 # for green/yellow paper
+MAX_DC_MOTOR_TIME = 1.8  # seconds
 
 MM_PER_PULSE = [0.2, 0.2]  # mm per pulse for each motor
 LASER_BOARD_SIZE = [83.0, 83.0]  # size of the board in mm
