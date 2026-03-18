@@ -1,6 +1,7 @@
 """
 Filename: ui.py
 Purpose: Handels all the UI functions
+Author: Amitai Ben Shalom
 """
 
 import pygame
@@ -42,6 +43,7 @@ class Ui:
             "title.png": (("38%", "17%"), ("center", 0), True),
             "frame.jpg": (("7%", None), ("4%", "15%"), False),
             "empty_drawing.jpg": (("40%", "35%"), ("center", "center"), False),
+            "homming_notification.jpg": (("50%", "35%"), ("center", "center"), False),
             "preview.jpg": (("40%", "60%"), ("center", "center"), False),
         }
 
@@ -55,16 +57,18 @@ class Ui:
             "square": (("7%", None), ("4%", "70%"), ("square.jpg", "squarePressed.jpg"), self.frame_square, True)
         }
 
-        self.points = []
-        self.mode = DRAWING_MODE
-        self.frame_points = []
-        self.frame = None
-        self.estimated_time = 0
-        self.show_estimated_time = False
-        self.arduino_error_message = None
+        self.points = []  # list of points in the current drawing, each point is (x, y) or None for stroke separation
+        self.mode = DRAWING_MODE  # or ERASING_MODE
+        self.frame_points = []  # list of points in the current frame
+        self.frame = None  # type of the frame to draw, can be HEART_FRAME, DROP_FRAME or SQUARE_FRAME
+        self.estimated_time = 0  # estimated time to complete the drawing
+        self.show_estimated_time = False  # whether to show the estimated time
+        self.arduino_error_message = None  # error message from Arduino to show on screen if exists, None otherwise
+        self.on_screen_message = None  # message to show on screen, this is used for messages that are not related to Arduino errors, such as repeat mode message
         self.last_touch_idle = 0  # idle stopwatch
         self.empty_notification = [False, 0]  # if clicked on drawing with empty drawing, [1] = init time when showed notification
-        self.show_preview = False  # after clicking print button, show preview
+        self.homming_notification = [False, 0]  # if arduino is homming right now, [1] = init time when showed notification
+        self.buttons_clicked_in_a_row = []  # for detecting hidden combos of button clicks (currently for homming)
         self.repeat = False  # for testing laser multiple times automatcially (press R to turn on/off)
 
         self.asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, self.view_port)
@@ -99,7 +103,9 @@ class Ui:
         self.render_available_length()
         self.render_estimated_time()
         self.render_arduino_error()
+        self.render_on_screen_message()
         self.render_empty_notification()
+        self.render_homming_notification()
         
     def render_borders(self):
         pygame.draw.rect(self.screen, COLOR_OUTSIDE_BORDER, (0, 0, self.border_line_left, self.view_port[1]))
@@ -137,7 +143,7 @@ class Ui:
             self.buttons["drop"].current_image = self.buttons["drop"].image
             self.buttons["square"].current_image = self.buttons["square"].image_clicked
 
-        if self.laser.is_drawing():
+        if self.laser.is_drawing() or self.homming_notification[0]:
             self.buttons["print"].current_image = self.buttons["print"].another_image
 
         for name, button in self.buttons.items():
@@ -150,15 +156,25 @@ class Ui:
             else:
                 self.empty_notification[0] = False
 
+    def render_homming_notification(self):
+        if self.homming_notification[0]:
+            if time.time() - self.homming_notification[1] <= HOMMING_TIME: 
+                self.asset_loader.render(self.screen, "homming_notification")
+            else:
+                self.homming_notification[0] = False
+
     def check_idle(self):
         if time.time() - self.last_touch_idle > IDLE_TIME:
             self.points.clear()
+            self.buttons_clicked_in_a_row.clear()
             self.last_touch_idle = time.time()
 
     def drawing_mode_on(self):
+        self.buttons_clicked_in_a_row.append("draw")
         self.mode = DRAWING_MODE
 
     def erasing_mode_on(self):
+        self.buttons_clicked_in_a_row.append("erase")
         self.mode = ERASING_MODE
 
     def delete_last_stroke(self):
@@ -214,12 +230,47 @@ class Ui:
             del self.points[closest_stroke_start_idx:closest_stroke_end_idx]
 
     def clear_all(self):
+        self.buttons_clicked_in_a_row.append("clear")
         self.points.clear()
 
+    def repeat_mode_on(self):
+        self.repeat = True
+        self.on_screen_message = REPEAT_MODE_ON_MESSAGE
+
+    def repeat_mode_off(self):
+        self.repeat = False
+        self.on_screen_message = None
+
+    def homming(self, alert=True):
+        if self.laser.exist():
+            self.logger.info("Sent homming command to laser")
+
+            if alert:
+                self.homming_notification[0] = True
+                self.homming_notification[1] = time.time()
+
+            self.laser.send_values("RESET")
+            self.laser.end_drawing()
+            self.show_estimated_time = False
+
+    def detect_hidden_homming_combo(self):
+        # if user pressed on combo below in a row, send homming command to laser
+        combo = ["clear", "erase", "draw", "clear", "erase", "draw", "clear", "erase", "draw"]
+        if len(self.buttons_clicked_in_a_row) < len(combo):
+            return
+        
+        if self.buttons_clicked_in_a_row[-len(combo):] == combo:
+            self.logger.info("Detected homming combo, sending homming command to laser...")
+            self.homming()
+            self.buttons_clicked_in_a_row = []  # reset the button combo tracker
 
     def send_to_laser(self, save_image=True, alert_empty=True):
         if not self.laser.exist():
             self.logger.error("Error: No Arduino is connected, skipping")
+            return
+        
+        if self.homming_notification[0]:  # if currently homming, don't allow sending to laser
+            self.logger.error("Clicked on print button while homming, skipping")
             return
             
         if self.laser.is_drawing():
@@ -311,7 +362,17 @@ class Ui:
         text = font.render(self.arduino_error_message, True, text_color)
         self.screen.blit(text, (self.border_line_left, self.border_line_top))
 
+    def render_on_screen_message(self):
+        if self.on_screen_message is None:
+            return
+        
+        font = pygame.font.SysFont(None, int(0.02 * self.view_port[0]))
+        text_color = DARK_GREEN
+        text = font.render(self.on_screen_message, True, text_color)
+        self.screen.blit(text, (self.border_line_left, self.border_line_top + 30))
+
     def frame_heart(self):
+        self.buttons_clicked_in_a_row.append("heart")
         self.frame = HEART_FRAME
         self.frame_points.clear()
         
@@ -333,6 +394,7 @@ class Ui:
 
 
     def frame_drop(self):
+        self.buttons_clicked_in_a_row.append("drop")
         self.frame = DROP_FRAME
         self.frame_points.clear()
         
@@ -353,6 +415,7 @@ class Ui:
             self.frame_points = list_points
 
     def frame_square(self):
+        self.buttons_clicked_in_a_row.append("square")
         self.frame = SQUARE_FRAME
         self.frame_points.clear()
         
@@ -382,6 +445,7 @@ class Ui:
         if (not self.points or self.points[-1] is None or self.distance(self.points[-1], pos) >= MIN_DISTANCE_BETWEEN_POINTS):
             if self.in_border(pos) and self.total_drawing_length() <  MAX_LENGTH:
                 self.points.append(pos)
+                self.buttons_clicked_in_a_row.clear()  # reset the button combo tracker if user is drawing
             
             elif self.points and self.points[-1] is not None:
                 self.points.append(None)

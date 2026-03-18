@@ -1,6 +1,7 @@
 """
 Filename: laser.py
 Purpose: Handle all the laser functions
+Author: Amitai Ben Shalom
 """
 
 import serial

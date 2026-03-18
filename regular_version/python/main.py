@@ -1,6 +1,7 @@
 """
 Filename: main.py
 Purpose: Main file for the exhibit - run me
+Author: Amitai Ben Shalom
 """
 
 import time
@@ -41,12 +42,17 @@ def main():
 
             if event.type == KEYDOWN and event.key == K_r:
                 ui.repeat = not ui.repeat
+                ui.on_screen_message = REPEAT_MODE_ON_MESSAGE if ui.repeat else None
+
+            if event.type == KEYDOWN and event.key == K_h:
+                ui.homming()
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     mouse_down = True
                     ui.handle_point(event.pos)
                     ui.last_touch_idle = time.time()
+                    ui.repeat_mode_off()  # if user touched the screen, turn off repeat mode
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:  # Left click released
@@ -58,6 +64,7 @@ def main():
             mouse_pos = pygame.mouse.get_pos()
             ui.handle_point(mouse_pos)
 
+        ui.detect_hidden_homming_combo()
         ui.check_idle()
         ui.handle_laser()
         ui.render_screen()
