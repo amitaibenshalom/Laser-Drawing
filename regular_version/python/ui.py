@@ -61,7 +61,7 @@ class Ui:
         self.frame = None
         self.estimated_time = 0
         self.show_estimated_time = False
-        self.show_arduino_error = False
+        self.arduino_error_message = None
         self.last_touch_idle = 0  # idle stopwatch
         self.empty_notification = [False, 0]  # if clicked on drawing with empty drawing, [1] = init time when showed notification
         self.show_preview = False  # after clicking print button, show preview
@@ -254,39 +254,61 @@ class Ui:
                 if self.laser.arduino.in_waiting:
                     response = self.laser.arduino.readline().strip()
                     self.logger.info(f"Arduino sent: {response}")
-                    self.show_arduino_error = False
 
-                    if not self.laser.sent_init_params:
+                    if response == b"READY":
+                        self.arduino_error_message = None
                         self.laser.send_initial_parameters()  # wait until arduino sends first message
+                    
+                    else:
+                        # this is not expected, show error
+                        self.logger.error(f"Unexpected response from Arduino!!!: {response}")
+                        self.arduino_error_message = ERROR_UNEXPECTED_ARDUINO_RESPONSE
 
                 if self.repeat:
                     time.sleep(1)  # delay to make sure everything is stable
                     self.send_to_laser(save_image=False, alert_empty=False)
 
             except:
-                self.show_arduino_error = True
+                self.arduino_error_message = ERROR_LASER_DISCONNECTED
                 self.laser.arduino = None
 
             finally:
                 return
         
+        # if got to here - this means laser is currently drawing, check if it finished or if there is an error
         status = self.laser.check_on_laser()
-        if status == "DONE":
+
+        if status == "NO_ARDUINO":
+            return
+
+        if status != "DRAWING":  # this includes "RESET", "SUCCESS", "ERROR_UNEXPECTED_RESPONSE", "ERROR_ARDUINO_DISCONNECTED"
+            self.laser.end_drawing()
             self.show_estimated_time = False
+            self.arduino_error_message = None
 
-        elif status == "ERROR":
-            self.show_arduino_error = True
+            if status == "RESET":
+                self.logger.error("Timeout waiting for Arduino. Stopping transmission.")
+            
+            elif status == "ERROR_ARDUINO_DISCONNECTED":
+                self.logger.error("Arduino disconnected! Reconnect it and restart program")
+                self.arduino_error_message = ERROR_LASER_DISCONNECTED
 
-        else:
-            self.show_arduino_error = False
+            elif status == "ERROR_UNEXPECTED_RESPONSE":
+                self.logger.error("Unexpected response from Arduino. Stopping transmission.")
+                self.arduino_error_message = ERROR_UNEXPECTED_ARDUINO_RESPONSE
+
+            return
+
+        self.arduino_error_message = None
+        
 
     def render_arduino_error(self):
-        if not self.show_arduino_error:
+        if self.arduino_error_message is None:
             return
         
         font = pygame.font.SysFont(None, int(0.025 * self.view_port[0]))
         text_color = RED
-        text = font.render("Laser disconnected! reconnect it and restart program", True, text_color)
+        text = font.render(self.arduino_error_message, True, text_color)
         self.screen.blit(text, (self.border_line_left, self.border_line_top))
 
     def frame_heart(self):
