@@ -65,6 +65,7 @@ class Ui:
         self.last_touch_idle = 0  # idle stopwatch
         self.empty_notification = [False, 0]  # if clicked on drawing with empty drawing, [1] = init time when showed notification
         self.show_preview = False  # after clicking print button, show preview
+        self.repeat = False  # for testing laser multiple times automatcially (press R to turn on/off)
 
         self.asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, self.view_port)
         self.buttons = self.init_buttons(BUTTONS_CONFIGURATION)
@@ -216,7 +217,7 @@ class Ui:
         self.points.clear()
 
 
-    def send_to_laser(self):
+    def send_to_laser(self, save_image=True, alert_empty=True):
         if not self.laser.exist():
             self.logger.error("Error: No Arduino is connected, skipping")
             return
@@ -224,13 +225,15 @@ class Ui:
         if self.laser.is_drawing():
             return
         
-        if len(self.points) == 0:
+        if alert_empty and len(self.points) == 0:
             self.empty_notification[0] = True
             self.empty_notification[1] = time.time() 
             self.logger.info("Clicked on print button with empty drawing, skipping")
             return
 
-        self.save_drawing_as_image()
+        if save_image:
+            self.save_drawing_as_image()
+        
         self.estimated_time = self.calc_estimated_time()
         self.show_estimated_time = True
         self.laser.init_drawing(self.points.copy(), self.frame_points.copy())
@@ -255,6 +258,11 @@ class Ui:
 
                     if not self.laser.sent_init_params:
                         self.laser.send_initial_parameters()  # wait until arduino sends first message
+
+                if self.repeat:
+                    time.sleep(1)  # delay to make sure everything is stable
+                    self.send_to_laser(save_image=False, alert_empty=False)
+
             except:
                 self.show_arduino_error = True
                 self.laser.arduino = None

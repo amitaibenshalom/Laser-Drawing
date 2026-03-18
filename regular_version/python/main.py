@@ -39,9 +39,12 @@ def main():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
                 running = False
 
+            if event.type == KEYDOWN and event.key == K_r:
+                ui.repeat = not ui.repeat
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    mouse_down = True      
+                    mouse_down = True
                     ui.handle_point(event.pos)
                     ui.last_touch_idle = time.time()
 
