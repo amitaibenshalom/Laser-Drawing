@@ -70,3 +70,6 @@ Active Maintainer: Amitai Ben Shalom
 Feel free to contact me about anything related to this exhibit: amitaiami22@gmail.com, I would love to help.
 
 *Created for the Jerusalem Science Museum*
+
+
+![Exhibit Preview](regular_version/python/assets/laser_drawing_example.png)
