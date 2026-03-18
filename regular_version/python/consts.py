@@ -77,4 +77,5 @@ ERROR_UNEXPECTED_ARDUINO_RESPONSE = "Unexpected response from Laser! Consider re
 REPEAT_MODE_ON_MESSAGE = "Repeat mode ON: The laser will draw the same drawing again, touch screen to stop"
 
 # homming values
+FORCE_HOMMING_AFTER_N_DRAWS = 50  # force homming after this many drawings (to prevent misalignment)
 HOMMING_TIME = 9  # seconds to wait for homming to finish

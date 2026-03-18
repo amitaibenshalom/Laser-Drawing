@@ -70,6 +70,7 @@ class Ui:
         self.homming_notification = [False, 0]  # if arduino is homming right now, [1] = init time when showed notification
         self.buttons_clicked_in_a_row = []  # for detecting hidden combos of button clicks (currently for homming)
         self.repeat = False  # for testing laser multiple times automatcially (press R to turn on/off)
+        self.drawings_counter = 0  # counts how many times the laser drew - for homming after certain number of drawings (FORCE_HOMMING_AFTER_N_DRAWS)
 
         self.asset_loader = AssetLoader(ASSETS_DIR, PICTURES_TO_LOAD, self.view_port)
         self.buttons = self.init_buttons(BUTTONS_CONFIGURATION)
@@ -336,6 +337,13 @@ class Ui:
             self.laser.end_drawing()
             self.show_estimated_time = False
             self.arduino_error_message = None
+
+            if status == "SUCCESS":
+                self.drawings_counter += 1
+                if self.drawings_counter >= FORCE_HOMMING_AFTER_N_DRAWS:
+                    self.logger.info(f"Automatically sending homming command after {FORCE_HOMMING_AFTER_N_DRAWS} drawings...")
+                    self.homming()
+                    self.drawings_counter = 0
 
             if status == "RESET":
                 self.logger.error("Timeout waiting for Arduino. Stopping transmission.")
