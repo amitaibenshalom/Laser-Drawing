@@ -14,7 +14,7 @@ Visitors interact with a custom touch screen interface to sketch their own desig
 
 The project is divided into two main subsystems working in tandem: a Python-based graphical user interface for the touch screen, and an Arduino-based hardware controller.
 
-See also documents under `/documents` for more infornation (תיק מוצג וסכמה אלקטרונית)
+See also documents under "סיכום" and "שרטוטים" for more infornation (תיק מוצג וסכמה אלקטרונית)
 
 ### 1. The Frontend UI (Python)
 Located in `regular_version/python/`, this handles all visitor interactions, rendering, and job dispatching.
